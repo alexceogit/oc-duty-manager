@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { LeaveType } from '../types';
+import type { LeaveType } from '../types';
 
 interface AddLeaveModalProps {
   onClose: () => void;

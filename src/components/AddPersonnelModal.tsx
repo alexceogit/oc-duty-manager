@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { MainRole, SubRole, SeniorityLevel } from '../types';
+import type { MainRole, SubRole, SeniorityLevel } from '../types';
 
 interface AddPersonnelModalProps {
   onClose: () => void;

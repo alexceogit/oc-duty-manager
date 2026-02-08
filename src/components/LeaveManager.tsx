@@ -7,7 +7,7 @@ import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
 export default function LeaveManager() {
-  const { state, deletePersonnel } = useApp();
+  const { state } = useApp();
 
   // Group leaves by personnel
   const leavesByPersonnel = state.leaves.reduce((acc, leave) => {
@@ -79,8 +79,8 @@ export default function LeaveManager() {
                     {leave.leaveType}
                   </span>
                   <span className="text-sm text-gray-600 dark:text-gray-300">
-                    {format(parseISO(leave.startDate), 'd MMM', { locale: tr })} - 
-                    {format(parseISO(leave.endDate), 'd MMM yyyy', { locale: tr })}
+                    {format(leave.startDate instanceof Date ? leave.startDate : parseISO(leave.startDate as string), 'd MMM', { locale: tr })} - 
+                    {format(leave.endDate instanceof Date ? leave.endDate : parseISO(leave.endDate as string), 'd MMM yyyy', { locale: tr })}
                   </span>
                   {leave.startTime && (
                     <span className="text-xs text-gray-500">

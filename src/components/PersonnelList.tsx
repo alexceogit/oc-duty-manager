@@ -3,7 +3,7 @@
 // ============================================
 
 import { useApp } from '../context/AppContext';
-import { MainRole, SubRole, SeniorityLevel } from '../types';
+import type { MainRole, SeniorityLevel } from '../types';
 
 export default function PersonnelList() {
   const { state, updatePersonnel, deletePersonnel } = useApp();

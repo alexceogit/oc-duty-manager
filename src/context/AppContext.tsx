@@ -2,8 +2,8 @@
 // APP CONTEXT - Global state management
 // ============================================
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
-import { Personnel, Leave, DutyAssignment, AlgorithmSettings } from '../types';
+import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import type { Personnel, Leave, DutyAssignment, AlgorithmSettings } from '../types';
 import { supabase, supabaseHelpers } from '../services/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -102,7 +102,10 @@ function appReducer(state: AppState, action: Action): AppState {
         duties: state.duties.filter(d => d.id !== action.payload)
       };
     case 'SET_DUTIES_FOR_DATE':
-      const otherDuties = state.duties.filter(d => d.date !== action.payload.date);
+      const dateStr = new Date(action.payload.date).toISOString().split('T')[0];
+      const otherDuties = state.duties.filter(d => 
+        new Date(d.date).toISOString().split('T')[0] !== dateStr
+      );
       return { ...state, duties: [...otherDuties, ...action.payload.duties] };
     case 'SET_CURRENT_DATE':
       return { ...state, currentDate: action.payload };
@@ -265,7 +268,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // NEW RULE: Normal personnel can have 2 duties, seniors 1
       const existingDuties = state.duties.filter(d => 
-        d.personnelId === p.id && d.date === dateStr
+        d.personnelId === p.id && new Date(d.date).toISOString().split('T')[0] === dateStr
       );
       
       const maxDuties = p.seniority === 'Normal' 
@@ -300,7 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       shifts.forEach(shift => {
         const count = personnelPerShift[shift] || 1;
         const assignedIds = newDuties
-          .filter(d => d.location === location && d.shift === shift && d.date === dateStr)
+          .filter(d => d.location === location && d.shift === shift && new Date(d.date).toISOString().split('T')[0] === dateStr)
           .map(d => d.personnelId);
 
         // Find available personnel for this shift
@@ -368,7 +371,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   function clearAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
-    const autoDuties = state.duties.filter(d => d.date === dateStr && !d.isManual);
+    const autoDuties = state.duties.filter(d => new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual);
     
     autoDuties.forEach(duty => {
       dispatch({ type: 'DELETE_DUTY', payload: duty.id });

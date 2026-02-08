@@ -4,7 +4,7 @@
 
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { DutyLocation, ShiftType } from '../types';
+import type { DutyLocation, ShiftType } from '../types';
 
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
 const shifts: ShiftType[] = ['Sabah 1', 'Sabah 2', 'Öğlen', 'Akşam 1', 'Gece 1', 'Gece 2'];
@@ -19,14 +19,16 @@ const shiftTimeRanges: Record<ShiftType, string> = {
 };
 
 export default function DutyScheduler() {
-  const { state, addDuty, deleteDuty, updateDuty } = useApp();
+  const { state, addDuty, deleteDuty } = useApp();
   const [selectedLocation, setSelectedLocation] = useState<DutyLocation | 'Hepsi'>('Hepsi');
   const [draggedPersonnel, setDraggedPersonnel] = useState<string | null>(null);
 
   const dateStr = state.currentDate.toISOString().split('T')[0];
 
   // Get duties for current date
-  const todayDuties = state.duties.filter(d => d.date === dateStr);
+  const todayDuties = state.duties.filter(d => 
+    new Date(d.date).toISOString().split('T')[0] === dateStr
+  );
 
   // Filter by location if selected
   const filteredDuties = selectedLocation === 'Hepsi'

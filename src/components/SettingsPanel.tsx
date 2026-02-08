@@ -3,19 +3,9 @@
 // ============================================
 
 import { useApp } from '../context/AppContext';
-import { AlgorithmSettings } from '../types';
 
 export default function SettingsPanel() {
   const { state } = useApp();
-
-  const defaultSettings: AlgorithmSettings = {
-    allowMultipleDutiesPerDay: true,
-    maxDutiesPerDayNormal: 2,
-    maxDutiesPerDaySenior: 1,
-    priorityOrder: ['Normal', 'Kıdemli', 'Dede'],
-    excludeSubRoles: ['Haberci', 'Santral'],
-    nightShiftPriority: ['Normal', 'Kıdemli', 'Dede']
-  };
 
   return (
     <div className="space-y-6">
