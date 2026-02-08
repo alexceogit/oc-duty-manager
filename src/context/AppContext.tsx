@@ -49,11 +49,11 @@ type Action =
   | { type: 'SET_SUPABASE_STATUS'; payload: boolean }
   | { type: 'RESET_STATE' };
 
-// Initial state
+// Initial state - Load mock data immediately
 const initialState: AppState = {
-  personnel: [],
-  leaves: [],
-  duties: [],
+  personnel: mockPersonnel,
+  leaves: generateMockLeaves(),
+  duties: generateMockDuties(),
   settings: defaultSettings,
   currentDate: new Date(),
   isLoading: false,
