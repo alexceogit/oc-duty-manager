@@ -5,6 +5,7 @@
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { Personnel, Leave, DutyAssignment, AlgorithmSettings } from '../types';
 import { supabase, supabaseHelpers } from '../services/supabase';
+import { mockPersonnel, generateMockLeaves, generateMockDuties } from '../services/mockData';
 import { v4 as uuidv4 } from 'uuid';
 
 // Default algorithm settings
@@ -179,9 +180,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (duties) {
             dispatch({ type: 'SET_DUTIES', payload: duties as any });
           }
+        } else {
+          // Load mock data when Supabase is not connected
+          console.log('📦 Loading mock data...');
+          dispatch({ type: 'SET_PERSONNEL', payload: mockPersonnel });
+          dispatch({ type: 'SET_LEAVES', payload: generateMockLeaves() });
+          dispatch({ type: 'SET_DUTIES', payload: generateMockDuties() });
         }
         
         dispatch({ type: 'SET_LOADING', payload: false });
+      } else {
+        // No Supabase configured, load mock data
+        console.log('📦 Loading mock data (no Supabase)...');
+        dispatch({ type: 'SET_PERSONNEL', payload: mockPersonnel });
+        dispatch({ type: 'SET_LEAVES', payload: generateMockLeaves() });
+        dispatch({ type: 'SET_DUTIES', payload: generateMockDuties() });
+        dispatch({ type: 'SET_SUPABASE_STATUS', payload: false });
       }
     }
 
