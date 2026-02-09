@@ -1,21 +1,27 @@
 // ============================================
-// MAIN APP - Duty Manager
+// MAIN APP - Duty Manager with Auth
 // ============================================
 
 import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import PersonnelList from './components/PersonnelList';
 import LeaveManager from './components/LeaveManager';
 import DutyScheduler from './components/DutyScheduler';
 import AddPersonnelModal from './components/AddPersonnelModal';
 import AddLeaveModal from './components/AddLeaveModal';
 import SettingsPanel from './components/SettingsPanel';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
 type Tab = 'personnel' | 'leaves' | 'duties' | 'settings';
 
+// Main App Content (protected)
 function DutyManager() {
   const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule } = useApp();
+  const { signOut, state: authState } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('duties');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showAddLeave, setShowAddLeave] = useState(false);
@@ -54,22 +60,45 @@ function DutyManager() {
     }
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-slate-900">
       {/* Header */}
       <header className="bg-white dark:bg-slate-800 shadow-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              🛡️ Nöbet Yönetimi
-            </h1>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                🛡️ Nöbet Yönetimi
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {authState.user?.email}
+              </p>
+            </div>
             
-            {/* Supabase Status */}
-            <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${state.supabaseConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {state.supabaseConnected ? 'Online' : 'Offline'}
-              </span>
+            {/* User Menu */}
+            <div className="flex items-center gap-4">
+              {/* Supabase Status */}
+              <div className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${state.supabaseConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {state.supabaseConnected ? 'Online' : 'Offline'}
+                </span>
+              </div>
+
+              {/* Sign Out */}
+              <button
+                onClick={handleSignOut}
+                className="text-sm text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-white flex items-center gap-1"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Çıkış
+              </button>
             </div>
           </div>
 
@@ -230,12 +259,42 @@ function DutyManager() {
   );
 }
 
+// Main App with Routing
 function App() {
   return (
-    <AppProvider>
-      <DutyManager />
-    </AppProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <AppProvider>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPageWrapper />} />
+            
+            {/* Protected Routes */}
+            <Route
+              path="/*"
+              element={
+                <ProtectedRoute>
+                  <DutyManager />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </AppProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
+}
+
+// Login Page Wrapper that handles auth state
+function LoginPageWrapper() {
+  const { isAuthenticated, state } = useAuth();
+
+  // If already authenticated, redirect to home
+  if (state.initialized && isAuthenticated) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <LoginPage />;
 }
 
 export default App;

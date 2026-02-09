@@ -7,12 +7,11 @@ import { useApp } from '../context/AppContext';
 import type { DutyLocation, ShiftType } from '../types';
 
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
-const shifts: ShiftType[] = ['Sabah 1', 'Sabah 2', 'Öğlen', 'Akşam 1', 'Gece 1', 'Gece 2'];
+const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
 
 const shiftTimeRanges: Record<ShiftType, string> = {
-  'Sabah 1': '06:00 - 10:00',
-  'Sabah 2': '10:00 - 14:00',
-  'Öğlen': '14:00 - 18:00',
+  'Gündüz 1': '06:00 - 12:00',
+  'Gündüz 2': '12:00 - 18:00',
   'Akşam 1': '18:00 - 22:00',
   'Gece 1': '22:00 - 02:00',
   'Gece 2': '02:00 - 06:00'
@@ -106,8 +105,7 @@ export default function DutyScheduler() {
   const getShiftType = (shift: ShiftType) => {
     if (shift === 'Gece 1' || shift === 'Gece 2') return 'night';
     if (shift === 'Akşam 1') return 'evening';
-    if (shift === 'Öğlen') return 'day';
-    return 'morning';
+    return 'day';
   };
 
   if (todayDuties.length === 0) {

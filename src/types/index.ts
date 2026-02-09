@@ -32,13 +32,13 @@ export type DutyLocation =
   | 'Santral';
 
 // Shift types for Çapraz, Kaya1, Kaya2
+// Gündüz: 6 saat (2 vardiya), Akşam/Gece: 4 saat (3 vardiya)
 export type ShiftType = 
-  | 'Sabah 1'   // 06:00 - 10:00
-  | 'Sabah 2'   // 10:00 - 14:00
-  | 'Öğlen'     // 14:00 - 18:00
-  | 'Akşam 1'   // 18:00 - 22:00
-  | 'Gece 1'    // 22:00 - 02:00
-  | 'Gece 2';   // 02:00 - 06:00
+  | 'Gündüz 1'   // 06:00 - 12:00 (6 saat)
+  | 'Gündüz 2'   // 12:00 - 18:00 (6 saat)
+  | 'Akşam 1'    // 18:00 - 22:00 (4 saat)
+  | 'Gece 1'     // 22:00 - 02:00 (4 saat)
+  | 'Gece 2';    // 02:00 - 06:00 (4 saat)
 
 // Personnel interface
 export interface Personnel {

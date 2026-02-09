@@ -125,7 +125,7 @@ export default function SettingsPanel() {
         <div className="space-y-2 text-sm text-amber-700 dark:text-amber-300">
           <p>✓ Öncelik çavuşlardadır</p>
           <p>✓ Yanında mutlaka 1 er bulunmalıdır</p>
-          <p>✓ Sabah vardiyalarında çavuşu zorlamamak için</p>
+          <p>✓ Gündüz vardiyalarında çavuşu zorlamamak için</p>
         </div>
       </div>
 

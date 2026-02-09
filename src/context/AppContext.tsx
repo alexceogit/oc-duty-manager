@@ -3,9 +3,8 @@
 // ============================================
 
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-import type { Personnel, Leave, DutyAssignment, AlgorithmSettings } from '../types';
+import type { Personnel, Leave, DutyAssignment, AlgorithmSettings, ShiftType } from '../types';
 import { supabase, supabaseHelpers } from '../services/supabase';
-import { mockPersonnel, generateMockLeaves, generateMockDuties } from '../services/mockData';
 import { v4 as uuidv4 } from 'uuid';
 
 // Default algorithm settings
@@ -49,11 +48,11 @@ type Action =
   | { type: 'SET_SUPABASE_STATUS'; payload: boolean }
   | { type: 'RESET_STATE' };
 
-// Initial state - Load mock data immediately
+// Initial state - Empty arrays, no mock data
 const initialState: AppState = {
-  personnel: mockPersonnel,
-  leaves: generateMockLeaves(),
-  duties: generateMockDuties(),
+  personnel: [],
+  leaves: [],
+  duties: [],
   settings: defaultSettings,
   currentDate: new Date(),
   isLoading: false,
@@ -181,20 +180,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
             dispatch({ type: 'SET_DUTIES', payload: duties as any });
           }
         } else {
-          // Load mock data when Supabase is not connected
-          console.log('📦 Loading mock data...');
-          dispatch({ type: 'SET_PERSONNEL', payload: mockPersonnel });
-          dispatch({ type: 'SET_LEAVES', payload: generateMockLeaves() });
-          dispatch({ type: 'SET_DUTIES', payload: generateMockDuties() });
+          // No Supabase data - start with empty state
+          console.log('📦 Starting with empty data (no mock data)');
         }
         
         dispatch({ type: 'SET_LOADING', payload: false });
       } else {
-        // No Supabase configured, load mock data
-        console.log('📦 Loading mock data (no Supabase)...');
-        dispatch({ type: 'SET_PERSONNEL', payload: mockPersonnel });
-        dispatch({ type: 'SET_LEAVES', payload: generateMockLeaves() });
-        dispatch({ type: 'SET_DUTIES', payload: generateMockDuties() });
+        // No Supabase configured - start with empty state
+        console.log('📦 Starting with empty data (no Supabase configured)');
         dispatch({ type: 'SET_SUPABASE_STATUS', payload: false });
       }
     }
@@ -261,7 +254,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_CURRENT_DATE', payload: date });
   }
 
-  // Auto-schedule algorithm
+  // Auto-schedule algorithm with new shift structure
   function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     
@@ -300,15 +293,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Create auto assignments for Çapraz, Kaya1, Kaya2
     const locations = ['Çapraz', 'Kaya1', 'Kaya2'] as const;
-    const shifts = ['Sabah 1', 'Sabah 2', 'Öğlen', 'Akşam 1', 'Gece 1', 'Gece 2'] as const;
+    const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
     
-    // Kaya1 and Kaya2 have 2 people at night
+    // Gece shifts have 2 people (except Çapraz)
     const personnelPerShift: Record<string, number> = {
       'Çapraz': 1,
       'Kaya1': 1,
       'Kaya2': 1,
-      'Gece 1': 2,  // Special: 2 people at night
-      'Gece 2': 2   // Special: 2 people at night
+      'Gece 1': 2,  // 2 people at night
+      'Gece 2': 2   // 2 people at night
     };
 
     const newDuties: DutyAssignment[] = [];

@@ -3,9 +3,7 @@
 // ============================================
 
 import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseKey = import.meta.env.VITE_SUPABASE_KEY || '';
+import { supabaseUrl, supabaseKey } from '../config';
 
 export const supabase = supabaseUrl && supabaseKey 
   ? createClient(supabaseUrl, supabaseKey)
@@ -59,6 +57,19 @@ export interface Database {
         };
         Insert: Omit<Database['public']['Tables']['duty_assignments']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['duty_assignments']['Insert']>;
+      };
+      profiles: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string | null;
+          role: string;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at' | 'updated_at'>;
+        Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
       };
     };
   };
@@ -166,7 +177,33 @@ export const supabaseHelpers = {
       .from('duty_assignments')
       .delete()
       .eq('date', date)
-      .eq('is_manual', false); // Only clear auto-assigned duties
+      .eq('is_manual', false);
+    return { error };
+  },
+
+  // Profile operations
+  async getProfile(userId: string) {
+    if (!supabase) return { data: null, error: 'Supabase not configured' };
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    return { data, error };
+  },
+
+  async createProfile(profile: any) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase.from('profiles').insert(profile);
+    return { error };
+  },
+
+  async updateProfile(userId: string, updates: any) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase
+      .from('profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', userId);
     return { error };
   }
 };
