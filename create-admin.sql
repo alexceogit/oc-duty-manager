@@ -1,12 +1,21 @@
 -- ============================================
 -- ADMIN KULLANICI OLUŞTURMA
--- Email: admin@nobet.com
--- Şifre: 1@ss2d
+-- Email: admin@nobet.com | Şifre: 1@ss2d
 -- ============================================
 
--- 1. Admin kullanıcıyı oluştur
+-- Önce trigger'ı devre dışı bırak
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- 1. Mevcut kullanıcı varsa sil
+DELETE FROM profiles WHERE email = 'admin@nobet.com';
+DELETE FROM auth.users WHERE email = 'admin@nobet.com';
+
+-- 2. UUID extension kontrolü
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 3. Admin kullanıcıyı oluştur
 INSERT INTO auth.users (
-  instance_id,
+  id,
   email,
   encrypted_password,
   email_confirmed_at,
@@ -14,20 +23,16 @@ INSERT INTO auth.users (
   created_at,
   updated_at
 ) VALUES (
-  (SELECT id FROM auth.instances LIMIT 1),
+  uuid_generate_v4(),
   'admin@nobet.com',
   crypt('1@ss2d', gen_salt('bf')),
   NOW(),
   '{"full_name": "Admin"}',
   NOW(),
   NOW()
-)
-ON CONFLICT (email) DO UPDATE SET
-  encrypted_password = crypt('1@ss2d', gen_salt('bf')),
-  email_confirmed_at = NOW(),
-  updated_at = NOW();
+);
 
--- 2. Profil tablosuna ekle (admin rolü)
+-- 4. Profil tablosuna admin rolü ile ekle
 INSERT INTO profiles (id, email, full_name, role)
 SELECT 
   id,
@@ -35,10 +40,12 @@ SELECT
   'Admin',
   'admin'
 FROM auth.users 
-WHERE email = 'admin@nobet.com'
-ON CONFLICT (id) DO UPDATE SET
-  role = 'admin',
-  updated_at = NOW();
+WHERE email = 'admin@nobet.com';
 
--- 3. Kontrol et
-SELECT email, role, created_at FROM profiles WHERE email = 'admin@nobet.com';
+-- 5. Trigger'ı geri aç (isteğe bağlı)
+-- CREATE TRIGGER on_auth_user_created
+--   AFTER INSERT ON auth.users
+--   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 6. Kontrol
+SELECT email, role FROM profiles WHERE email = 'admin@nobet.com';
