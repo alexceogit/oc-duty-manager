@@ -2,7 +2,7 @@
 // MAIN APP - Duty Manager with Auth
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -20,11 +20,12 @@ type Tab = 'personnel' | 'leaves' | 'duties' | 'settings';
 
 // Main App Content (protected)
 function DutyManager() {
-  const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule } = useApp();
+  const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule, refreshData } = useApp();
   const { signOut, state: authState } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('duties');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showAddLeave, setShowAddLeave] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'personnel', label: 'Personel', icon: '👥' },
@@ -32,6 +33,16 @@ function DutyManager() {
     { id: 'duties', label: 'Nöbetler', icon: '🗓️' },
     { id: 'settings', label: 'Ayarlar', icon: '⚙️' },
   ];
+
+  // Refresh data when tab changes
+  useEffect(() => {
+    async function refresh() {
+      setIsRefreshing(true);
+      await refreshData();
+      setIsRefreshing(false);
+    }
+    refresh();
+  }, [activeTab]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('tr-TR', {
@@ -62,6 +73,10 @@ function DutyManager() {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  const handleTabChange = (tabId: Tab) => {
+    setActiveTab(tabId);
   };
 
   return (
@@ -144,7 +159,7 @@ function DutyManager() {
             {tabs.map(tab => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex-1 min-w-fit px-4 py-2 rounded-md font-medium transition-colors flex items-center justify-center gap-2 ${
                   activeTab === tab.id
                     ? 'bg-white dark:bg-slate-600 text-indigo-600 dark:text-indigo-400 shadow-sm'
@@ -153,6 +168,12 @@ function DutyManager() {
               >
                 <span>{tab.icon}</span>
                 <span className="hidden sm:inline">{tab.label}</span>
+                {isRefreshing && activeTab === tab.id && (
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                )}
               </button>
             ))}
           </div>
@@ -162,15 +183,20 @@ function DutyManager() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Loading State */}
-        {state.isLoading && (
+        {(state.isLoading || isRefreshing) && (
           <div className="flex items-center justify-center py-12">
-            <div className="spinner" />
-            <span className="ml-3 text-gray-600 dark:text-gray-400">Yükleniyor...</span>
+            <svg className="animate-spin h-8 w-8 text-indigo-600" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span className="ml-3 text-gray-600 dark:text-gray-400">
+              {isRefreshing ? 'Veriler güncelleniyor...' : 'Yükleniyor...'}
+            </span>
           </div>
         )}
 
         {/* Tab Content */}
-        {!state.isLoading && (
+        {!state.isLoading && !isRefreshing && (
           <>
             {activeTab === 'personnel' && (
               <div className="space-y-4">

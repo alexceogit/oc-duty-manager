@@ -139,6 +139,8 @@ interface AppContextType {
   clearAutoSchedule: (date: Date) => void;
   // Date navigation
   setCurrentDate: (date: Date) => void;
+  // Data refresh
+  refreshData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -420,6 +422,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  // Refresh all data from Supabase
+  async function refreshData() {
+    if (!supabase) return;
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    
+    try {
+      // Reload personnel
+      const { data: personnel, error: pError } = await supabaseHelpers.getPersonnel();
+      if (!pError && personnel) {
+        dispatch({ type: 'SET_PERSONNEL', payload: snakeToCamel(personnel) as any });
+      }
+
+      // Reload leaves
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+      const { data: leaves } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
+      if (leaves) {
+        dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
+      }
+
+      // Reload duties for current date
+      const today = now.toISOString().split('T')[0];
+      const { data: duties } = await supabaseHelpers.getDuties(today);
+      if (duties) {
+        dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
+      }
+    } catch (error) {
+      console.error('Refresh error:', error);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }
+
   const value: AppContextType = {
     state,
     dispatch,
@@ -432,7 +469,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteDuty,
     runAutoSchedule,
     clearAutoSchedule,
-    setCurrentDate
+    setCurrentDate,
+    refreshData
   };
 
   return (
