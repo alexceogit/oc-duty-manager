@@ -143,6 +143,40 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | null>(null);
 
+// Helper function to convert camelCase to snake_case
+function camelToSnake(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(camelToSnake);
+  }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  const result: any = {};
+  for (const key of Object.keys(obj)) {
+    const snakeKey = key.replace(/[A-Z]/g, letter => '_' + letter.toLowerCase());
+    result[snakeKey] = camelToSnake(obj[key]);
+  }
+  return result;
+}
+
+// Helper function to convert snake_case to camelCase
+function snakeToCamel(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(snakeToCamel);
+  }
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+  
+  const result: any = {};
+  for (const key of Object.keys(obj)) {
+    const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    result[camelKey] = snakeToCamel(obj[key]);
+  }
+  return result;
+}
+
 // Provider
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
@@ -161,7 +195,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Load personnel
           const { data: personnel, error: pError } = await supabaseHelpers.getPersonnel();
           if (!pError && personnel) {
-            dispatch({ type: 'SET_PERSONNEL', payload: personnel as any });
+            dispatch({ type: 'SET_PERSONNEL', payload: snakeToCamel(personnel) as any });
           }
 
           // Load leaves for current month
@@ -170,14 +204,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
           const { data: leaves } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
           if (leaves) {
-            dispatch({ type: 'SET_LEAVES', payload: leaves as any });
+            dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
           }
 
           // Load duties for current date
           const today = now.toISOString().split('T')[0];
           const { data: duties } = await supabaseHelpers.getDuties(today);
           if (duties) {
-            dispatch({ type: 'SET_DUTIES', payload: duties as any });
+            dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
           }
         } else {
           // No Supabase data - start with empty state
@@ -204,13 +238,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date()
     };
     dispatch({ type: 'ADD_PERSONNEL', payload: newPerson });
-    supabaseHelpers.addPersonnel({ ...newPerson, created_at: newPerson.createdAt.toISOString(), updated_at: newPerson.updatedAt.toISOString() });
+    supabaseHelpers.addPersonnel(camelToSnake({ ...newPerson, created_at: newPerson.createdAt.toISOString(), updated_at: newPerson.updatedAt.toISOString() }));
   }
 
   function updatePersonnel(id: string, updates: Partial<Personnel>) {
     const updatedPerson = { ...updates, id, updatedAt: new Date() } as Personnel;
     dispatch({ type: 'UPDATE_PERSONNEL', payload: updatedPerson });
-    supabaseHelpers.updatePersonnel(id, { ...updates, updated_at: new Date().toISOString() });
+    supabaseHelpers.updatePersonnel(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
   }
 
   function deletePersonnel(id: string) {
@@ -225,7 +259,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt: new Date()
     };
     dispatch({ type: 'ADD_LEAVE', payload: newLeave });
-    supabaseHelpers.addLeave({ ...newLeave, created_at: newLeave.createdAt.toISOString() });
+    supabaseHelpers.addLeave(camelToSnake({ ...newLeave, created_at: newLeave.createdAt.toISOString() }));
   }
 
   function addDuty(duty: Omit<DutyAssignment, 'id' | 'createdAt' | 'updatedAt'>) {
@@ -236,13 +270,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date()
     };
     dispatch({ type: 'ADD_DUTY', payload: newDuty });
-    supabaseHelpers.addDuty({ ...newDuty, created_at: newDuty.createdAt.toISOString(), updated_at: newDuty.updatedAt.toISOString() });
+    supabaseHelpers.addDuty(camelToSnake({ ...newDuty, created_at: newDuty.createdAt.toISOString(), updated_at: newDuty.updatedAt.toISOString() }));
   }
 
   function updateDuty(id: string, updates: Partial<DutyAssignment>) {
     const updatedDuty = { ...updates, id, updatedAt: new Date() } as DutyAssignment;
     dispatch({ type: 'UPDATE_DUTY', payload: updatedDuty });
-    supabaseHelpers.updateDuty(id, { ...updates, updated_at: new Date().toISOString() });
+    supabaseHelpers.updateDuty(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
   }
 
   function deleteDuty(id: string) {
