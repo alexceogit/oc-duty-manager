@@ -1,5 +1,5 @@
 // ============================================
-// LOGIN PAGE
+// LOGIN PAGE - Sadece Giriş
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -8,10 +8,9 @@ import { supabaseAuth } from '../services/auth';
 import type { AuthError } from '@supabase/supabase-js';
 
 export default function LoginPage() {
-  const { state, signIn, signUp, clearError } = useAuth();
+  const { state, signIn, clearError } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
@@ -36,9 +35,6 @@ export default function LoginPage() {
     if (msg.includes('user')) {
       return 'Kullanıcı bulunamadı';
     }
-    if (msg.includes('already')) {
-      return 'Bu e-posta ile kayıt var';
-    }
     return error.message || 'Bir hata oluştu';
   }
 
@@ -52,18 +48,9 @@ export default function LoginPage() {
       return;
     }
 
-    if (isSignUp) {
-      const result = await signUp(email, password);
-      if (result.error) {
-        setMessage(getErrorMessage(result.error));
-      } else {
-        setMessage('Kayıt başarılı! E-posta adresinizi doğrulayın.');
-      }
-    } else {
-      const result = await signIn(email, password);
-      if (result.error) {
-        setMessage(getErrorMessage(result.error));
-      }
+    const result = await signIn(email, password);
+    if (result.error) {
+      setMessage(getErrorMessage(result.error));
     }
   }
 
@@ -88,7 +75,7 @@ export default function LoginPage() {
             Nöbet Yönetim Sistemi
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            {isSignUp ? 'Hesap oluşturun' : 'Giriş yapın'}
+            Giriş yapın
           </p>
         </div>
 
@@ -122,7 +109,7 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors pr-12"
                   placeholder="••••••••"
-                  autoComplete={isSignUp ? 'new-password' : 'current-password'}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -145,11 +132,7 @@ export default function LoginPage() {
 
             {/* Message/Error */}
             {message && (
-              <div className={`p-3 rounded-lg text-sm ${
-                message.includes('başarılı') || message.includes('doğrulayın')
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-              }`}>
+              <div className="p-3 rounded-lg text-sm bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
                 {message}
               </div>
             )}
@@ -169,29 +152,10 @@ export default function LoginPage() {
                   İşleniyor...
                 </span>
               ) : (
-                isSignUp ? 'Kayıt Ol' : 'Giriş Yap'
+                'Giriş Yap'
               )}
             </button>
           </form>
-
-          {/* Toggle Sign Up/Sign In */}
-          <div className="mt-6 text-center">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                clearError();
-                setMessage('');
-              }}
-              className="text-sm text-indigo-600 hover:text-indigo-500 dark:text-indigo-400"
-            >
-              {isSignUp ? (
-                <>Zaten hesabınız var mı? <strong>Giriş yapın</strong></>
-              ) : (
-                <>Hesabınız yok mu? <strong>Kayıt olun</strong></>
-              )}
-            </button>
-          </div>
 
           {/* Supabase Status */}
           <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
