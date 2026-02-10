@@ -237,8 +237,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
           // Load leaves for current month
           const now = new Date();
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
+          const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+          const endOfMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+          const startOfMonth = startOfMonthDate.toISOString();
+          const endOfMonth = endOfMonthDate.toISOString();
           const { data: leaves, error: lError } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
           if (lError) console.error('Leaves load error:', lError);
           if (leaves) {
@@ -246,9 +248,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
 
           // Load duties for current month (for MonthlyCalendar)
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-          const { data: duties, error: dError } = await supabaseHelpers.getDutiesByMonth(startOfMonth, endOfMonth);
+          const startOfMonthStr = startOfMonthDate.toISOString().split('T')[0];
+          const endOfMonthStr = endOfMonthDate.toISOString().split('T')[0];
+          const { data: duties, error: dError } = await supabaseHelpers.getDutiesByMonth(startOfMonthStr, endOfMonthStr);
           if (dError) console.error('Duties load error:', dError);
           if (duties) {
             dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
@@ -528,7 +530,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
                (e.exemptionType === 'shift_location' && e.targetValue === `${shift}|${ln.location}`))
             );
             
-            if (!hasExemp) {
+            // Check if person is already assigned to this location today (any shift)
+            const alreadyAtLocation = newDuties.some(d => 
+              d.personnelId === person.id && 
+              d.location === ln.location &&
+              new Date(d.date).toISOString().split('T')[0] === dateStr
+            );
+            
+            if (!hasExemp && !alreadyAtLocation) {
               assignedForLocation.push(person);
               personIndex++;
               break;
@@ -544,11 +553,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Add all new duties to database
+    // Save all new duties to database
+    console.log(`Saving ${newDuties.length} duties to database...`);
     for (const duty of newDuties) {
+      console.log('Saving duty:', duty);
       dispatch({ type: 'ADD_DUTY', payload: duty });
-      const { error } = await supabaseHelpers.addDuty({ ...duty, created_at: duty.createdAt.toISOString(), updated_at: duty.updatedAt.toISOString() });
-      if (error) console.error('Auto-schedule add duty error:', error);
+      const { error } = await supabaseHelpers.addDuty({
+        personnel_id: duty.personnelId,
+        location: duty.location,
+        shift: duty.shift,
+        date: new Date(duty.date).toISOString().split('T')[0],
+        is_manual: duty.isManual,
+        created_at: duty.createdAt.toISOString(),
+        updated_at: duty.updatedAt.toISOString()
+      });
+      if (error) {
+        console.error('Auto-schedule add duty error:', error);
+      } else {
+        console.log('Duty saved successfully:', duty.id);
+      }
     }
   }
 
@@ -592,17 +615,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Reload leaves
       const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
-      const { data: leaves } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
+      const startOfMonthDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonthDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const startOfMonthISO = startOfMonthDate.toISOString();
+      const endOfMonthISO = endOfMonthDate.toISOString();
+      const { data: leaves } = await supabaseHelpers.getLeaves(startOfMonthISO, endOfMonthISO);
       if (leaves) {
         dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
       }
 
       // Reload duties for current month
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-      const { data: duties } = await supabaseHelpers.getDutiesByMonth(startOfMonth, endOfMonth);
+      const startOfMonthStr = startOfMonthDate.toISOString().split('T')[0];
+      const endOfMonthStr = endOfMonthDate.toISOString().split('T')[0];
+      const { data: duties } = await supabaseHelpers.getDutiesByMonth(startOfMonthStr, endOfMonthStr);
       if (duties) {
         dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
       }
