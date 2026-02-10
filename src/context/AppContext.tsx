@@ -268,7 +268,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // CRUD Operations
-  function addPersonnel(person: Omit<Personnel, 'id' | 'createdAt' | 'updatedAt'>) {
+  async function addPersonnel(person: Omit<Personnel, 'id' | 'createdAt' | 'updatedAt'>) {
     const newPerson: Personnel = {
       ...person,
       id: uuidv4(),
@@ -293,7 +293,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (error) console.error('Delete personnel error:', error);
   }
 
-  async function addLeave(leave: Omit<Leave, 'id' | 'createdAt'>) {
+  async function addLeave(leave: Omit<Leave, 'id' | 'createdAt'>): Promise<void> {
     const newLeave: Leave = {
       ...leave,
       id: uuidv4(),
@@ -301,7 +301,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     dispatch({ type: 'ADD_LEAVE', payload: newLeave });
     const { error } = await supabaseHelpers.addLeave(camelToSnake({ ...newLeave, created_at: newLeave.createdAt.toISOString() }));
-    if (error) console.error('Add leave error:', error);
+    if (error) {
+      console.error('Add leave error:', error);
+      throw new Error(error.message || 'İzin eklenirken hata oluştu');
+    }
   }
 
   async function addDuty(duty: Omit<DutyAssignment, 'id' | 'createdAt' | 'updatedAt'>) {

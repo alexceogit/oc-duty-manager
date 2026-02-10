@@ -22,32 +22,37 @@ export default function AddLeaveModal({ onClose }: AddLeaveModalProps) {
     endTime: '',
     notes: ''
   });
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     
     if (!formData.personnelId) {
-      alert('Lütfen personel seçiniz.');
+      setError('Lütfen personel seçiniz.');
       return;
     }
 
     if (!formData.startDate || !formData.endDate) {
-      alert('Lütfen tarih aralığı giriniz.');
+      setError('Lütfen tarih aralığı giriniz.');
       return;
     }
 
-    addLeave({
-      personnelId: formData.personnelId,
-      leaveType: formData.leaveType,
-      startDate: new Date(formData.startDate),
-      endDate: new Date(formData.endDate),
-      startTime: formData.startTime || undefined,
-      endTime: formData.endTime || undefined,
-      isApproved: true,
-      notes: formData.notes || undefined
-    });
-
-    onClose();
+    try {
+      await addLeave({
+        personnelId: formData.personnelId,
+        leaveType: formData.leaveType,
+        startDate: new Date(formData.startDate),
+        endDate: new Date(formData.endDate),
+        startTime: formData.startTime || undefined,
+        endTime: formData.endTime || undefined,
+        isApproved: true,
+        notes: formData.notes || undefined
+      });
+      onClose();
+    } catch (err: any) {
+      setError('İzin eklenirken hata oluştu: ' + err.message);
+    }
   };
 
   const leaveTypes: LeaveType[] = [
@@ -82,6 +87,11 @@ export default function AddLeaveModal({ onClose }: AddLeaveModalProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Personel *
