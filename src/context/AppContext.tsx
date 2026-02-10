@@ -530,14 +530,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
                (e.exemptionType === 'shift_location' && e.targetValue === `${shift}|${ln.location}`))
             );
             
-            // Check if person is already assigned to this location today (any shift)
+            // Check if person is already assigned to THIS location today
             const alreadyAtLocation = newDuties.some(d => 
               d.personnelId === person.id && 
               d.location === ln.location &&
               new Date(d.date).toISOString().split('T')[0] === dateStr
             );
             
-            if (!hasExemp && !alreadyAtLocation) {
+            if (alreadyAtLocation) {
+              personIndex++;
+              continue;
+            }
+            
+            // 8-hour gap check from ANY previous assignment (across ALL locations)
+            let hasGap = true;
+            for (const duty of newDuties.filter(d => d.personnelId === person.id)) {
+              if (!duty.shift) continue;
+              const existingEnd = shiftTimes[duty.shift].end;
+              const newStart = shiftTimes[shift].start;
+              let gap: number;
+              if (existingEnd > newStart) {
+                gap = (24 - existingEnd) + newStart;
+              } else {
+                gap = newStart - existingEnd;
+              }
+              if (gap < 8) {
+                hasGap = false;
+                break;
+              }
+            }
+            
+            if (!hasGap) {
+              personIndex++;
+              continue;
+            }
+            
+            if (!hasExemp) {
               assignedForLocation.push(person);
               personIndex++;
               break;
