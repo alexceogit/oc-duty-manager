@@ -676,17 +676,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dateStr = date.toISOString().split('T')[0];
     const currentDuties = stateRef.current.duties;
     
-    console.log('Current duties in state:', currentDuties.length);
-    console.log('Duties:', currentDuties.map(d => ({ id: d.id, location: d.location, shift: d.shift, isManual: d.isManual, date: new Date(d.date).toISOString() })));
-    
-    const autoDuties = currentDuties.filter(d => 
-      new Date(d.date).toISOString().split('T')[0] === dateStr && 
-      (d.isManual === false || d.isManual === undefined || d.isManual === null)
+    // Get ALL duties for this date (both manual and auto)
+    const allDutiesForDate = currentDuties.filter(d => 
+      new Date(d.date).toISOString().split('T')[0] === dateStr
     );
     
-    console.log('Auto duties found:', autoDuties.length);
+    console.log('All duties for date:', allDutiesForDate.length);
     
-    alert(`🧹 Temizlik başladı\n📅 Tarih: ${dateStr}\n👥 Silinecek nöbet: ${autoDuties.length}`);
+    alert(`🧹 Temizlik başladı\n📅 Tarih: ${dateStr}\n👥 Silinecek nöbet: ${allDutiesForDate.length}\n\nNOT: Tüm nöbetler (manuel + otomatik) silinecek`);
     
     // Dispatch loading state
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -695,9 +692,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     let errorCount = 0;
     
     try {
-      // Delete each duty from Supabase first
-      for (const duty of autoDuties) {
-        console.log(`Deleting from DB: ${duty.id}`);
+      // Delete each duty from Supabase
+      for (const duty of allDutiesForDate) {
+        console.log(`Deleting: ${duty.id} - ${duty.location} ${duty.shift}`);
         const { error } = await supabaseHelpers.deleteDuty(duty.id);
         if (error) {
           console.error(`Delete error:`, error);
@@ -707,7 +704,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
       
-      // Clear all auto-duties from local state
+      // Clear all duties for this date from local state
       dispatch({ type: 'SET_DUTIES_FOR_DATE', payload: { date: dateStr, duties: [] } });
       
       alert(`✅ Temizlik tamamlandı!\n\n📊 Başarılı: ${successCount}\n❌ Hata: ${errorCount}`);
