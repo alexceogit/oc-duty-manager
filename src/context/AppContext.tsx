@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-import type { Personnel, Leave, DutyAssignment, AlgorithmSettings, ShiftType } from '../types';
+import type { Personnel, Leave, DutyAssignment, AlgorithmSettings, ShiftType, PersonnelExemption } from '../types';
 import { supabase, supabaseHelpers } from '../services/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,6 +22,7 @@ interface AppState {
   personnel: Personnel[];
   leaves: Leave[];
   duties: DutyAssignment[];
+  exemptions: PersonnelExemption[];
   settings: AlgorithmSettings;
   currentDate: Date;
   isLoading: boolean;
@@ -42,6 +43,10 @@ type Action =
   | { type: 'UPDATE_DUTY'; payload: DutyAssignment }
   | { type: 'DELETE_DUTY'; payload: string }
   | { type: 'SET_DUTIES_FOR_DATE'; payload: { date: string; duties: DutyAssignment[] } }
+  | { type: 'SET_EXEMPTIONS'; payload: PersonnelExemption[] }
+  | { type: 'ADD_EXEMPTION'; payload: PersonnelExemption }
+  | { type: 'UPDATE_EXEMPTION'; payload: PersonnelExemption }
+  | { type: 'DELETE_EXEMPTION'; payload: string }
   | { type: 'SET_CURRENT_DATE'; payload: Date }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -53,6 +58,7 @@ const initialState: AppState = {
   personnel: [],
   leaves: [],
   duties: [],
+  exemptions: [],
   settings: defaultSettings,
   currentDate: new Date(),
   isLoading: false,
@@ -107,6 +113,22 @@ function appReducer(state: AppState, action: Action): AppState {
         new Date(d.date).toISOString().split('T')[0] !== dateStr
       );
       return { ...state, duties: [...otherDuties, ...action.payload.duties] };
+    case 'SET_EXEMPTIONS':
+      return { ...state, exemptions: action.payload };
+    case 'ADD_EXEMPTION':
+      return { ...state, exemptions: [...state.exemptions, action.payload] };
+    case 'UPDATE_EXEMPTION':
+      return {
+        ...state,
+        exemptions: state.exemptions.map(e =>
+          e.id === action.payload.id ? action.payload : e
+        )
+      };
+    case 'DELETE_EXEMPTION':
+      return {
+        ...state,
+        exemptions: state.exemptions.filter(e => e.id !== action.payload)
+      };
     case 'SET_CURRENT_DATE':
       return { ...state, currentDate: action.payload };
     case 'SET_LOADING':
@@ -134,6 +156,10 @@ interface AppContextType {
   addDuty: (duty: Omit<DutyAssignment, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateDuty: (id: string, updates: Partial<DutyAssignment>) => void;
   deleteDuty: (id: string) => void;
+  // Exemption CRUD
+  addExemption: (exemption: Omit<PersonnelExemption, 'id' | 'createdAt'>) => void;
+  updateExemption: (id: string, updates: Partial<PersonnelExemption>) => void;
+  deleteExemption: (id: string) => void;
   // Algorithm
   runAutoSchedule: (date: Date) => void;
   clearAutoSchedule: (date: Date) => void;
@@ -215,6 +241,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (duties) {
             dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
           }
+
+          // Load exemptions
+          const { data: exemptions } = await supabaseHelpers.getExemptions();
+          if (exemptions) {
+            dispatch({ type: 'SET_EXEMPTIONS', payload: snakeToCamel(exemptions) as any });
+          }
         } else {
           // No Supabase data - start with empty state
           console.log('📦 Starting with empty data (no mock data)');
@@ -286,11 +318,51 @@ export function AppProvider({ children }: { children: ReactNode }) {
     supabaseHelpers.deleteDuty(id);
   }
 
+  // Exemption CRUD Operations
+  function addExemption(exemption: Omit<PersonnelExemption, 'id' | 'createdAt'>) {
+    const newExemption: PersonnelExemption = {
+      ...exemption,
+      id: uuidv4(),
+      createdAt: new Date()
+    };
+    dispatch({ type: 'ADD_EXEMPTION', payload: newExemption });
+    supabaseHelpers.addExemption(camelToSnake({ ...newExemption, created_at: newExemption.createdAt.toISOString() }));
+  }
+
+  function updateExemption(id: string, updates: Partial<PersonnelExemption>) {
+    const updatedExemption = { ...updates, id } as PersonnelExemption;
+    dispatch({ type: 'UPDATE_EXEMPTION', payload: updatedExemption });
+    supabaseHelpers.updateExemption(id, camelToSnake(updates));
+  }
+
+  function deleteExemption(id: string) {
+    dispatch({ type: 'DELETE_EXEMPTION', payload: id });
+    supabaseHelpers.deleteExemption(id);
+  }
+
   function setCurrentDate(date: Date) {
     dispatch({ type: 'SET_CURRENT_DATE', payload: date });
   }
 
-  // Auto-schedule algorithm with new shift structure
+  // Check if personnel has exemption for location or shift
+  function hasExemption(personnelId: string, location?: string, shift?: string): boolean {
+    return state.exemptions.some(e => {
+      if (e.personnelId !== personnelId || !e.isActive) return false;
+      
+      if (e.exemptionType === 'shift' && shift && e.targetValue === shift) return true;
+      if (e.exemptionType === 'location' && location && e.targetValue === location) return true;
+      
+      // Combined check: shift_location
+      if (e.exemptionType === 'shift_location' && shift && location) {
+        const [exemptShift, exemptLocation] = (e.targetValue as string).split('|');
+        return exemptShift === shift && exemptLocation === location;
+      }
+      
+      return false;
+    });
+  }
+
+  // Auto-schedule algorithm with new shift structure and exemptions
   function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     
@@ -351,9 +423,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Find available personnel for this shift
         const eligible = availablePersonnel.filter(p => {
+          // Check if already assigned
           if (assignedIds.includes(p.id)) return false;
+          // Check subrole exclusion
           if (p.subRole && state.settings.excludeSubRoles.includes(p.subRole)) return false;
+          // Check Dede night shift restriction
           if (p.seniority === 'Dede' && (shift === 'Gece 1' || shift === 'Gece 2')) return false;
+          // Check exemptions
+          if (hasExemption(p.id, location, shift)) return false;
           return true;
         });
 
@@ -450,6 +527,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (duties) {
         dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
       }
+
+      // Reload exemptions
+      const { data: exemptions } = await supabaseHelpers.getExemptions();
+      if (exemptions) {
+        dispatch({ type: 'SET_EXEMPTIONS', payload: snakeToCamel(exemptions) as any });
+      }
     } catch (error) {
       console.error('Refresh error:', error);
     } finally {
@@ -467,6 +550,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addDuty,
     updateDuty,
     deleteDuty,
+    addExemption,
+    updateExemption,
+    deleteExemption,
     runAutoSchedule,
     clearAutoSchedule,
     setCurrentDate,

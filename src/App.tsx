@@ -9,7 +9,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import PersonnelList from './components/PersonnelList';
 import LeaveManager from './components/LeaveManager';
 import DutyScheduler from './components/DutyScheduler';
-import AddPersonnelModal from './components/AddPersonnelModal';
+import PersonnelFormModal from './components/PersonnelFormModal';
 import AddLeaveModal from './components/AddLeaveModal';
 import SettingsPanel from './components/SettingsPanel';
 import LoginPage from './pages/LoginPage';
@@ -275,7 +275,7 @@ function DutyManager() {
 
       {/* Modals */}
       {showAddPersonnel && (
-        <AddPersonnelModal onClose={() => setShowAddPersonnel(false)} />
+        <PersonnelFormModal onClose={() => setShowAddPersonnel(false)} isEditing={false} />
       )}
       
       {showAddLeave && (

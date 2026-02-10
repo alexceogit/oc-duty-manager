@@ -71,6 +71,19 @@ export interface Database {
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'id' | 'created_at' | 'updated_at'>;
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>;
       };
+      personnel_exemptions: {
+        Row: {
+          id: string;
+          personnel_id: string;
+          exemption_type: string;
+          target_value: string;
+          reason: string | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['personnel_exemptions']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['personnel_exemptions']['Insert']>;
+      };
     };
   };
 }
@@ -204,6 +217,41 @@ export const supabaseHelpers = {
       .from('profiles')
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', userId);
+    return { error };
+  },
+
+  // Exemption operations
+  async getExemptions() {
+    if (!supabase) return { data: [], error: 'Supabase not configured' };
+    const { data, error } = await supabase
+      .from('personnel_exemptions')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+    return { data, error };
+  },
+
+  async addExemption(exemption: any) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase.from('personnel_exemptions').insert(exemption);
+    return { error };
+  },
+
+  async updateExemption(id: string, updates: any) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase
+      .from('personnel_exemptions')
+      .update(updates)
+      .eq('id', id);
+    return { error };
+  },
+
+  async deleteExemption(id: string) {
+    if (!supabase) return { error: 'Supabase not configured' };
+    const { error } = await supabase
+      .from('personnel_exemptions')
+      .update({ is_active: false })
+      .eq('id', id);
     return { error };
   }
 };

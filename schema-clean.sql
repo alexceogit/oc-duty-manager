@@ -64,11 +64,25 @@ CREATE TABLE IF NOT EXISTS duty_assignments (
 );
 
 -- ============================================
+-- PERSONNEL EXEMPTIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS personnel_exemptions (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  personnel_id UUID REFERENCES personnel(id) ON DELETE CASCADE NOT NULL,
+  exemption_type TEXT NOT NULL CHECK (exemption_type IN ('shift', 'location', 'shift_location')),
+  target_value TEXT NOT NULL,  -- For shift_location: "shift|location" format
+  reason TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================
 -- INDEXES
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_personnel_is_active ON personnel(is_active);
 CREATE INDEX IF NOT EXISTS idx_leaves_dates ON leaves(start_date, end_date);
 CREATE INDEX IF NOT EXISTS idx_duties_date ON duty_assignments(date);
+CREATE INDEX IF NOT EXISTS idx_exemptions_personnel ON personnel_exemptions(personnel_id);
 
 -- ============================================
 -- RLS POLICIES
@@ -93,5 +107,12 @@ CREATE POLICY "Auth users can read leaves" ON leaves
 -- Duty Assignments: Authenticated users can read
 CREATE POLICY "Auth users can read duties" ON duty_assignments
   FOR SELECT TO authenticated USING (true);
+
+-- Personnel Exemptions: Authenticated users can read/write
+CREATE POLICY "Auth users can read exemptions" ON personnel_exemptions
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Auth users can manage exemptions" ON personnel_exemptions
+  FOR ALL TO authenticated USING (true);
 
 SELECT 'Schema setup complete!' as status;

@@ -108,3 +108,17 @@ export interface MonthlySchedule {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// Exemption types
+export type ExemptionType = 'shift' | 'location' | 'shift_location';
+
+// Personnel exemption interface
+export interface PersonnelExemption {
+  id: string;
+  personnelId: string;
+  exemptionType: ExemptionType;
+  targetValue: ShiftType | DutyLocation | string;  // string for "shift|location" format
+  reason?: string;
+  isActive: boolean;
+  createdAt: Date;
+}

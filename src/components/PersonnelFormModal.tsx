@@ -1,17 +1,19 @@
 // ============================================
-// ADD PERSONNEL MODAL
+// PERSONNEL FORM MODAL - Add/Edit Personnel
 // ============================================
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import type { MainRole, SubRole, SeniorityLevel } from '../types';
+import type { MainRole, SubRole, SeniorityLevel, Personnel } from '../types';
 
-interface AddPersonnelModalProps {
+interface PersonnelFormModalProps {
   onClose: () => void;
+  isEditing?: boolean;
+  initialData?: Personnel | null;
 }
 
-export default function AddPersonnelModal({ onClose }: AddPersonnelModalProps) {
-  const { addPersonnel } = useApp();
+export default function PersonnelFormModal({ onClose, isEditing = false, initialData = null }: PersonnelFormModalProps) {
+  const { addPersonnel, updatePersonnel } = useApp();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -21,6 +23,19 @@ export default function AddPersonnelModal({ onClose }: AddPersonnelModalProps) {
     seniority: 'Normal' as SeniorityLevel
   });
 
+  // Initialize form with existing data when editing
+  useEffect(() => {
+    if (isEditing && initialData) {
+      setFormData({
+        firstName: initialData.firstName,
+        lastName: initialData.lastName,
+        mainRole: initialData.mainRole,
+        subRole: initialData.subRole || '',
+        seniority: initialData.seniority
+      });
+    }
+  }, [isEditing, initialData]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -29,14 +44,26 @@ export default function AddPersonnelModal({ onClose }: AddPersonnelModalProps) {
       return;
     }
 
-    addPersonnel({
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      mainRole: formData.mainRole,
-      subRole: formData.subRole || null,
-      seniority: formData.seniority,
-      isActive: true
-    });
+    if (isEditing && initialData) {
+      // Update existing personnel
+      updatePersonnel(initialData.id, {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        mainRole: formData.mainRole,
+        subRole: formData.subRole || null,
+        seniority: formData.seniority
+      });
+    } else {
+      // Add new personnel
+      addPersonnel({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        mainRole: formData.mainRole,
+        subRole: formData.subRole || null,
+        seniority: formData.seniority,
+        isActive: true
+      });
+    }
 
     onClose();
   };
@@ -52,7 +79,7 @@ export default function AddPersonnelModal({ onClose }: AddPersonnelModalProps) {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              👤 Yeni Personel Ekle
+              {isEditing ? '✏️ Personeli Düzenle' : '👤 Yeni Personel Ekle'}
             </h2>
             <button
               onClick={onClose}
@@ -167,7 +194,7 @@ export default function AddPersonnelModal({ onClose }: AddPersonnelModalProps) {
                 type="submit"
                 className="flex-1 btn-primary"
               >
-                Ekle
+                {isEditing ? 'Güncelle' : 'Ekle'}
               </button>
             </div>
           </form>
