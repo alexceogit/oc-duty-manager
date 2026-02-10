@@ -392,12 +392,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dateStr = date.toISOString().split('T')[0];
     
     // Shift time definitions for 8-hour gap calculation
-    const shiftTimes: Record<ShiftType, { start: number; end: number }> = {
+    const shiftTimes: Record<string, { start: number; end: number }> = {
       'Gündüz 1': { start: 6, end: 12 },
       'Gündüz 2': { start: 12, end: 18 },
       'Akşam 1': { start: 18, end: 22 },
       'Gece 1': { start: 22, end: 2 },
-      'Gece 2': { start: 2, end: 6 }
+      'Gece 2': { start: 2, end: 6 },
+      'Santral Gündüz': { start: 8, end: 20 },
+      'Santral Gece': { start: 20, end: 8 }
     };
 
     // Get available personnel for this date
@@ -445,26 +447,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
 
     // Helper to check 8-hour gap between shifts
-    const has8HourGap = (personnelId: string, newShift: ShiftType): boolean => {
+    const has8HourGap = (personnelId: string, newShift: string): boolean => {
       const personDuties = newDuties.filter(d => d.personnelId === personnelId);
       if (personDuties.length === 0) return true;
       
       const newStart = shiftTimes[newShift].start;
-      const newEnd = shiftTimes[newShift].end;
       
       for (const duty of personDuties) {
         if (!duty.shift) continue;
-        const existingStart = shiftTimes[duty.shift].start;
         const existingEnd = shiftTimes[duty.shift].end;
         
-        // Calculate gap
+        // Calculate gap from END of previous shift to START of new shift
         let gap: number;
         if (existingEnd > newStart) {
+          // Previous shift ends next day (e.g., 02:00, new shift is 22:00)
           gap = (24 - existingEnd) + newStart;
         } else {
           gap = newStart - existingEnd;
         }
         
+        // Must have at least 8 hours rest after previous shift ends
         if (gap < 8) return false;
       }
       return true;
