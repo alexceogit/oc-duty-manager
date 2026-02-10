@@ -9,10 +9,9 @@ interface AddDutyModalProps {
   shift: ShiftType;
   date: Date;
   existingAssignmentId?: string;
-  initialDevriye?: boolean;
 }
 
-export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId, initialDevriye = false }: AddDutyModalProps) {
+export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId }: AddDutyModalProps) {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
   const [isDevriye, setIsDevriye] = useState(false);
@@ -51,8 +50,11 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
     });
   }, [state.personnel, assignedPersonnelIds]);
 
+  // Check if this shift needs 2 people
+  const needsTwoPeople = (location !== 'Çapraz') && 
+    (shift === 'Akşam 1' || shift === 'Gece 1' || shift === 'Gece 2');
+
   const handleSubmit = async () => {
-    // For Devriye, personnel selection is not required
     if (!isDevriye && !selectedPersonnelId) {
       setError('Lütfen bir personel seçin');
       return;
@@ -67,17 +69,25 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
         await deleteDuty(existingAssignmentId);
       }
 
-      // Add the new duty
+      // Calculate how many devriye assignments needed for this shift
+      const isNight = shift === 'Gece 1' || shift === 'Gece 2';
+      const isAkşam = shift === 'Akşam 1';
+      const needsTwoPeople = (location !== 'Çapraz') && (isNight || isAkşam);
+      const devriyeCount = needsTwoPeople ? 2 : 1;
+
+      // Add the new duty(s)
       if (isDevriye) {
-        // Devriye assignment - use a special ID
-        await addDuty({
-          personnelId: 'devriye-placeholder',
-          location,
-          shift,
-          date: new Date(dateStr),
-          isManual: true,
-          isDevriye: true
-        });
+        // Entire shift is Devriye - create multiple devriye assignments
+        for (let i = 0; i < devriyeCount; i++) {
+          await addDuty({
+            personnelId: 'devriye-placeholder',
+            location,
+            shift,
+            date: new Date(dateStr),
+            isManual: true,
+            isDevriye: true
+          });
+        }
       } else {
         // Normal personnel assignment
         await addDuty({
@@ -161,15 +171,13 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
               checked={isDevriye}
               onChange={(e) => {
                 setIsDevriye(e.target.checked);
-                if (e.target.checked) {
-                  setSelectedPersonnelId(null);
-                }
+                setSelectedPersonnelId(null);
               }}
               className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
             />
             <div>
-              <p className="font-medium text-gray-900 dark:text-white">DEVRİYE Olarak İşaretle</p>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Personel atanmadan boş olarak işaretle</p>
+              <p className="font-medium text-gray-900 dark:text-white">Tüm Vardiyayı DEVRİYE Yap</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Seçilirse bu vardiyadaki tüm slotlar Devriye olur</p>
             </div>
           </label>
         </div>
@@ -181,8 +189,13 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
           </label>
           
           {isDevriye ? (
-            <div className="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
-              <p className="text-gray-500">Devriye seçildi - personel atanmayacak</p>
+            <div className="text-center py-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+              <p className="text-amber-700 dark:text-amber-400 font-medium">
+                🚨 Tüm vardiya Devriye yapılacak
+              </p>
+              <p className="text-sm text-amber-600 dark:text-amber-500 mt-1">
+                {needsTwoPeople ? '2 kişilik yer de Devriye olacak' : 'Bu yer Devriye olacak'}
+              </p>
             </div>
           ) : availablePersonnel.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
@@ -239,7 +252,7 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
             disabled={(!selectedPersonnelId && !isDevriye) || isSubmitting}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Ekleniyor...' : isDevriye ? 'Devriye Olarak Kaydet' : 'Nöbet Ekle'}
+            {isSubmitting ? 'Ekleniyor...' : isDevriye ? 'Tüm Vardiyayı Devriye Yap' : 'Nöbet Ekle'}
           </button>
         </div>
       </div>
