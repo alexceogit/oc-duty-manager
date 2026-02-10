@@ -222,6 +222,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (connection.success) {
           // Load personnel
           const { data: personnel, error: pError } = await supabaseHelpers.getPersonnel();
+          if (pError) console.error('Personnel load error:', pError);
           if (!pError && personnel) {
             dispatch({ type: 'SET_PERSONNEL', payload: snakeToCamel(personnel) as any });
           }
@@ -230,20 +231,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const now = new Date();
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
           const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
-          const { data: leaves } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
+          const { data: leaves, error: lError } = await supabaseHelpers.getLeaves(startOfMonth, endOfMonth);
+          if (lError) console.error('Leaves load error:', lError);
           if (leaves) {
             dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
           }
 
           // Load duties for current date
           const today = now.toISOString().split('T')[0];
-          const { data: duties } = await supabaseHelpers.getDuties(today);
+          const { data: duties, error: dError } = await supabaseHelpers.getDuties(today);
+          if (dError) console.error('Duties load error:', dError);
           if (duties) {
             dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
           }
 
           // Load exemptions
-          const { data: exemptions } = await supabaseHelpers.getExemptions();
+          const { data: exemptions, error: eError } = await supabaseHelpers.getExemptions();
+          if (eError) console.error('Exemptions load error:', eError);
           if (exemptions) {
             dispatch({ type: 'SET_EXEMPTIONS', payload: snakeToCamel(exemptions) as any });
           }
@@ -272,31 +276,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date()
     };
     dispatch({ type: 'ADD_PERSONNEL', payload: newPerson });
-    supabaseHelpers.addPersonnel(camelToSnake({ ...newPerson, created_at: newPerson.createdAt.toISOString(), updated_at: newPerson.updatedAt.toISOString() }));
+    const { error } = await supabaseHelpers.addPersonnel(camelToSnake({ ...newPerson, created_at: newPerson.createdAt.toISOString(), updated_at: newPerson.updatedAt.toISOString() }));
+    if (error) console.error('Add personnel error:', error);
   }
 
-  function updatePersonnel(id: string, updates: Partial<Personnel>) {
+  async function updatePersonnel(id: string, updates: Partial<Personnel>) {
     const updatedPerson = { ...updates, id, updatedAt: new Date() } as Personnel;
     dispatch({ type: 'UPDATE_PERSONNEL', payload: updatedPerson });
-    supabaseHelpers.updatePersonnel(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
+    const { error } = await supabaseHelpers.updatePersonnel(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
+    if (error) console.error('Update personnel error:', error);
   }
 
-  function deletePersonnel(id: string) {
+  async function deletePersonnel(id: string) {
     dispatch({ type: 'DELETE_PERSONNEL', payload: id });
-    supabaseHelpers.deletePersonnel(id);
+    const { error } = await supabaseHelpers.deletePersonnel(id);
+    if (error) console.error('Delete personnel error:', error);
   }
 
-  function addLeave(leave: Omit<Leave, 'id' | 'createdAt'>) {
+  async function addLeave(leave: Omit<Leave, 'id' | 'createdAt'>) {
     const newLeave: Leave = {
       ...leave,
       id: uuidv4(),
       createdAt: new Date()
     };
     dispatch({ type: 'ADD_LEAVE', payload: newLeave });
-    supabaseHelpers.addLeave(camelToSnake({ ...newLeave, created_at: newLeave.createdAt.toISOString() }));
+    const { error } = await supabaseHelpers.addLeave(camelToSnake({ ...newLeave, created_at: newLeave.createdAt.toISOString() }));
+    if (error) console.error('Add leave error:', error);
   }
 
-  function addDuty(duty: Omit<DutyAssignment, 'id' | 'createdAt' | 'updatedAt'>) {
+  async function addDuty(duty: Omit<DutyAssignment, 'id' | 'createdAt' | 'updatedAt'>) {
     const newDuty: DutyAssignment = {
       ...duty,
       id: uuidv4(),
@@ -304,40 +312,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updatedAt: new Date()
     };
     dispatch({ type: 'ADD_DUTY', payload: newDuty });
-    supabaseHelpers.addDuty(camelToSnake({ ...newDuty, created_at: newDuty.createdAt.toISOString(), updated_at: newDuty.updatedAt.toISOString() }));
+    const { error } = await supabaseHelpers.addDuty(camelToSnake({ ...newDuty, created_at: newDuty.createdAt.toISOString(), updated_at: newDuty.updatedAt.toISOString() }));
+    if (error) console.error('Add duty error:', error);
   }
 
-  function updateDuty(id: string, updates: Partial<DutyAssignment>) {
+  async function updateDuty(id: string, updates: Partial<DutyAssignment>) {
     const updatedDuty = { ...updates, id, updatedAt: new Date() } as DutyAssignment;
     dispatch({ type: 'UPDATE_DUTY', payload: updatedDuty });
-    supabaseHelpers.updateDuty(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
+    const { error } = await supabaseHelpers.updateDuty(id, camelToSnake({ ...updates, updated_at: new Date().toISOString() }));
+    if (error) console.error('Update duty error:', error);
   }
 
-  function deleteDuty(id: string) {
+  async function deleteDuty(id: string) {
     dispatch({ type: 'DELETE_DUTY', payload: id });
-    supabaseHelpers.deleteDuty(id);
+    const { error } = await supabaseHelpers.deleteDuty(id);
+    if (error) console.error('Delete duty error:', error);
   }
 
   // Exemption CRUD Operations
-  function addExemption(exemption: Omit<PersonnelExemption, 'id' | 'createdAt'>) {
+  async function addExemption(exemption: Omit<PersonnelExemption, 'id' | 'createdAt'>) {
     const newExemption: PersonnelExemption = {
       ...exemption,
       id: uuidv4(),
       createdAt: new Date()
     };
     dispatch({ type: 'ADD_EXEMPTION', payload: newExemption });
-    supabaseHelpers.addExemption(camelToSnake({ ...newExemption, created_at: newExemption.createdAt.toISOString() }));
+    const { error } = await supabaseHelpers.addExemption(camelToSnake({ ...newExemption, created_at: newExemption.createdAt.toISOString() }));
+    if (error) console.error('Add exemption error:', error);
   }
 
-  function updateExemption(id: string, updates: Partial<PersonnelExemption>) {
+  async function updateExemption(id: string, updates: Partial<PersonnelExemption>) {
     const updatedExemption = { ...updates, id } as PersonnelExemption;
     dispatch({ type: 'UPDATE_EXEMPTION', payload: updatedExemption });
-    supabaseHelpers.updateExemption(id, camelToSnake(updates));
+    const { error } = await supabaseHelpers.updateExemption(id, camelToSnake(updates));
+    if (error) console.error('Update exemption error:', error);
   }
 
-  function deleteExemption(id: string) {
+  async function deleteExemption(id: string) {
     dispatch({ type: 'DELETE_EXEMPTION', payload: id });
-    supabaseHelpers.deleteExemption(id);
+    const { error } = await supabaseHelpers.deleteExemption(id);
+    if (error) console.error('Delete exemption error:', error);
   }
 
   function setCurrentDate(date: Date) {
@@ -363,7 +377,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   // Auto-schedule algorithm with new shift structure and exemptions
-  function runAutoSchedule(date: Date) {
+  async function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     
     // Get available personnel for this date
@@ -483,20 +497,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
 
     // Add all new duties
-    newDuties.forEach(duty => {
+    for (const duty of newDuties) {
       dispatch({ type: 'ADD_DUTY', payload: duty });
-      supabaseHelpers.addDuty({ ...duty, created_at: duty.createdAt.toISOString(), updated_at: duty.updatedAt.toISOString() });
-    });
+      const { error } = await supabaseHelpers.addDuty({ ...duty, created_at: duty.createdAt.toISOString(), updated_at: duty.updatedAt.toISOString() });
+      if (error) console.error('Auto-schedule add duty error:', error);
+    }
   }
 
-  function clearAutoSchedule(date: Date) {
+  async function clearAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     const autoDuties = state.duties.filter(d => new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual);
     
-    autoDuties.forEach(duty => {
+    for (const duty of autoDuties) {
       dispatch({ type: 'DELETE_DUTY', payload: duty.id });
-      supabaseHelpers.deleteDuty(duty.id);
-    });
+      const { error } = await supabaseHelpers.deleteDuty(duty.id);
+      if (error) console.error('Auto-schedule delete duty error:', error);
+    }
   }
 
   // Refresh all data from Supabase

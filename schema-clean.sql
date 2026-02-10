@@ -100,13 +100,40 @@ CREATE POLICY "Users can view own profile" ON profiles
 CREATE POLICY "Auth users can read personnel" ON personnel
   FOR SELECT TO authenticated USING (is_active = true);
 
+CREATE POLICY "Auth users can insert personnel" ON personnel
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Auth users can update personnel" ON personnel
+  FOR UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Auth users can delete personnel" ON personnel
+  FOR DELETE TO authenticated USING (true);
+
 -- Leaves: Authenticated users can read approved leaves
 CREATE POLICY "Auth users can read leaves" ON leaves
   FOR SELECT TO authenticated USING (is_approved = true);
 
--- Duty Assignments: Authenticated users can read
+CREATE POLICY "Auth users can insert leaves" ON leaves
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Auth users can update leaves" ON leaves
+  FOR UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Auth users can delete leaves" ON leaves
+  FOR DELETE TO authenticated USING (true);
+
+-- Duty Assignments: Authenticated users can read/write
 CREATE POLICY "Auth users can read duties" ON duty_assignments
   FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Auth users can insert duties" ON duty_assignments
+  FOR INSERT TO authenticated WITH CHECK (true);
+
+CREATE POLICY "Auth users can update duties" ON duty_assignments
+  FOR UPDATE TO authenticated USING (true);
+
+CREATE POLICY "Auth users can delete duties" ON duty_assignments
+  FOR DELETE TO authenticated USING (true);
 
 -- Personnel Exemptions: Authenticated users can read/write
 CREATE POLICY "Auth users can read exemptions" ON personnel_exemptions

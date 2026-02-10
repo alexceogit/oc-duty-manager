@@ -224,7 +224,7 @@ export default function ExemptionSettings({ onClose, personnel }: ExemptionSetti
                   type="button"
                   onClick={() => {
                     setIsAdding(false);
-                    setFormData({ exemptionType: 'shift', targetValue: '', reason: '' });
+                    setFormData({ exemptionType: 'shift', targetValue: '', targetShift: '', targetLocation: '', reason: '' });
                   }}
                   className="flex-1 btn-secondary"
                 >
