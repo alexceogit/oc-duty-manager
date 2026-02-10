@@ -675,14 +675,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function clearAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     const currentDuties = stateRef.current.duties;
-    const autoDuties = currentDuties.filter(d => new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual);
+    const autoDuties = currentDuties.filter(d => 
+      new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual
+    );
     
-    console.log(`Clearing ${autoDuties.length} auto-schedule duties`);
+    console.log('=== clearAutoSchedule START ===');
+    console.log('Date:', dateStr);
+    console.log('Current duties count:', currentDuties.length);
+    console.log('Auto duties to delete:', autoDuties.length);
     
-    for (const duty of autoDuties) {
-      dispatch({ type: 'DELETE_DUTY', payload: duty.id });
-      const { error } = await supabaseHelpers.deleteDuty(duty.id);
-      if (error) console.error('Auto-schedule delete duty error:', error);
+    // Dispatch loading state
+    dispatch({ type: 'SET_LOADING', payload: true });
+    
+    try {
+      // Delete each duty from Supabase first
+      for (const duty of autoDuties) {
+        console.log(`Deleting from DB: ${duty.id} - ${duty.location} ${duty.shift}`);
+        const { error } = await supabaseHelpers.deleteDuty(duty.id);
+        if (error) {
+          console.error(`DB delete error for ${duty.id}:`, error);
+        } else {
+          console.log(`DB delete success: ${duty.id}`);
+        }
+      }
+      
+      // Clear all auto-duties from local state
+      console.log('Dispatching SET_DUTIES_FOR_DATE');
+      dispatch({ type: 'SET_DUTIES_FOR_DATE', payload: { date: dateStr, duties: [] } });
+      
+      console.log('=== clearAutoSchedule END ===');
+    } catch (err) {
+      console.error('Error clearing auto-schedule:', err);
+      dispatch({ type: 'SET_LOADING', payload: false });
     }
   }
 

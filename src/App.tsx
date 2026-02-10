@@ -67,12 +67,16 @@ function DutyManager() {
     }
   };
 
-  const handleClearAutoSchedule = () => {
+  const handleClearAutoSchedule = async () => {
     console.log('Temizle button clicked');
-    if (confirm('Otomatik oluşturulan nöbetler silinsin mi?')) {
-      console.log('User confirmed, clearing auto schedule');
-      clearAutoSchedule(state.currentDate);
+    if (!confirm('Otomatik oluşturulan nöbetler silinsin mi?')) {
+      console.log('User cancelled');
+      return;
     }
+    
+    console.log('User confirmed, calling clearAutoSchedule');
+    await clearAutoSchedule(state.currentDate);
+    console.log('clearAutoSchedule completed');
   };
 
   const handleSignOut = async () => {
