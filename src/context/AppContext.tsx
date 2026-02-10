@@ -3,7 +3,7 @@
 // ============================================
 
 import React, { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
-import type { Personnel, Leave, DutyAssignment, AlgorithmSettings, ShiftType, PersonnelExemption } from '../types';
+import type { Personnel, Leave, DutyAssignment, AlgorithmSettings, ShiftType, PersonnelExemption, DutyLocation } from '../types';
 import { supabase, supabaseHelpers } from '../services/supabase';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -437,7 +437,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Create auto assignments for Çapraz, Kaya1, Kaya2
     const locations = ['Çapraz', 'Kaya1', 'Kaya2'] as const;
-    const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
     
     // Personnel count per location and shift
     const getPersonnelCount = (location: string, shift: string): number => {
@@ -548,13 +547,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
         else if (shift === 'Akşam 1') {
-          // Akşam 1: TWO people, prioritize Normal Er combinations
-          // Priority order:
-          // 1. Normal Er + Normal Er
+          // Akşam 1: TWO people, priority order:
+          // 1. Normal Er + Kıdemli Er
           // 2. Normal Er + Çavuş
-          // 3. Normal Er + Kıdemli
+          // 3. Normal Er + Normal Er
           // 4. Normal Er + Dede
-          // 5. Kıdemli + Dede
+          // 5. Kıdemli Er + Dede
           // 6. Any 2 eligible
           
           const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
@@ -564,23 +562,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
           
           const selected: Personnel[] = [];
           
-          // Option 1: Normal Er + Normal Er
-          if (normalErler.length >= 2) {
-            selected.push(normalErler[0], normalErler[1]);
-          }
-          // Option 2: Normal Er + Çavuş
-          else if (normalErler.length === 1 && çavuşlar.length >= 1) {
-            selected.push(normalErler[0], çavuşlar[0]);
-          }
-          // Option 3: Normal Er + Kıdemli
-          else if (normalErler.length === 1 && kıdemliErler.length >= 1) {
+          // Option 1: Normal Er + Kıdemli Er
+          if (normalErler.length >= 1 && kıdemliErler.length >= 1) {
             selected.push(normalErler[0], kıdemliErler[0]);
           }
+          // Option 2: Normal Er + Çavuş
+          else if (normalErler.length >= 1 && çavuşlar.length >= 1) {
+            selected.push(normalErler[0], çavuşlar[0]);
+          }
+          // Option 3: Normal Er + Normal Er
+          else if (normalErler.length >= 2) {
+            selected.push(normalErler[0], normalErler[1]);
+          }
           // Option 4: Normal Er + Dede
-          else if (normalErler.length === 1 && dedeErler.length >= 1) {
+          else if (normalErler.length >= 1 && dedeErler.length >= 1) {
             selected.push(normalErler[0], dedeErler[0]);
           }
-          // Option 5: Kıdemli + Dede
+          // Option 5: Kıdemli Er + Dede
           else if (kıdemliErler.length >= 1 && dedeErler.length >= 1) {
             selected.push(kıdemliErler[0], dedeErler[0]);
           }
