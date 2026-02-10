@@ -162,6 +162,16 @@ export const supabaseHelpers = {
     return { data, error };
   },
 
+  async getDutiesByMonth(startDate: string, endDate: string) {
+    if (!supabase) return { data: [], error: 'Supabase not configured' };
+    const { data, error } = await supabase
+      .from('duty_assignments')
+      .select('*')
+      .gte('date', startDate)
+      .lte('date', endDate);
+    return { data, error };
+  },
+
   async addDuty(duty: any) {
     if (!supabase) return { error: 'Supabase not configured' };
     const { error } = await supabase.from('duty_assignments').insert(duty);

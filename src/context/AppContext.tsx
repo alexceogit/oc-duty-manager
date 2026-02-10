@@ -245,9 +245,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
             dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
           }
 
-          // Load duties for current date
-          const today = now.toISOString().split('T')[0];
-          const { data: duties, error: dError } = await supabaseHelpers.getDuties(today);
+          // Load duties for current month (for MonthlyCalendar)
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+          const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+          const { data: duties, error: dError } = await supabaseHelpers.getDutiesByMonth(startOfMonth, endOfMonth);
           if (dError) console.error('Duties load error:', dError);
           if (duties) {
             dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
@@ -598,9 +599,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'SET_LEAVES', payload: snakeToCamel(leaves) as any });
       }
 
-      // Reload duties for current date
-      const today = now.toISOString().split('T')[0];
-      const { data: duties } = await supabaseHelpers.getDuties(today);
+      // Reload duties for current month
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+      const { data: duties } = await supabaseHelpers.getDutiesByMonth(startOfMonth, endOfMonth);
       if (duties) {
         dispatch({ type: 'SET_DUTIES', payload: snakeToCamel(duties) as any });
       }

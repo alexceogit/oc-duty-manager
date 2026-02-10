@@ -82,7 +82,7 @@ export default function MonthlyAssignmentModal({
   const isValid = hasYirmiDortcu && hasSantral;
 
   // Handle save
-  const handleSave = () => {
+  const handleSave = async () => {
     // Remove existing assignments for these locations
     if (existingAssignments?.nizamiye) {
       deleteDuty(existingAssignments.nizamiye.id);
