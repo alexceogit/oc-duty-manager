@@ -42,7 +42,8 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
   }, [state.personnel, assignedPersonnelIds]);
 
   const handleSubmit = async () => {
-    if (!selectedPersonnelId) {
+    // For Devriye, personnel selection is not required
+    if (!isDevriye && !selectedPersonnelId) {
       setError('Lütfen bir personel seçin');
       return;
     }
