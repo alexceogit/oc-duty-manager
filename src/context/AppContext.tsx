@@ -633,20 +633,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
-          is_manual: duty.isManual,
+          is_manual: false,  // Always false for auto-schedule
           is_devriye: true
         });
         if (error) {
           console.error('Auto-schedule add devriye error:', error);
         }
       } else {
-        // Normal personnel assignment
+        // Normal personnel assignment - force is_manual to false for auto-schedule
         const { error } = await supabaseHelpers.addDuty({
           personnel_id: duty.personnelId,
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
-          is_manual: duty.isManual,
+          is_manual: false,  // Always false for auto-schedule
           is_devriye: false
         });
         if (error) {
@@ -675,9 +675,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function clearAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     const currentDuties = stateRef.current.duties;
+    
+    console.log('Current duties in state:', currentDuties.length);
+    console.log('Duties:', currentDuties.map(d => ({ id: d.id, location: d.location, shift: d.shift, isManual: d.isManual, date: new Date(d.date).toISOString() })));
+    
     const autoDuties = currentDuties.filter(d => 
-      new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual
+      new Date(d.date).toISOString().split('T')[0] === dateStr && 
+      (d.isManual === false || d.isManual === undefined || d.isManual === null)
     );
+    
+    console.log('Auto duties found:', autoDuties.length);
     
     alert(`🧹 Temizlik başladı\n📅 Tarih: ${dateStr}\n👥 Silinecek nöbet: ${autoDuties.length}`);
     
@@ -690,6 +697,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       // Delete each duty from Supabase first
       for (const duty of autoDuties) {
+        console.log(`Deleting from DB: ${duty.id}`);
         const { error } = await supabaseHelpers.deleteDuty(duty.id);
         if (error) {
           console.error(`Delete error:`, error);
