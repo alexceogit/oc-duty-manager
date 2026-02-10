@@ -474,6 +474,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const newDuties: DutyAssignment[] = [];
 
+    // Helper to find the best pair for Akşam 1
+    const findAkşam1Pair = (
+      eligible: Personnel[], 
+      assignedIds: string[],
+      location: string
+    ): { main: Personnel | null; secondary: Personnel | null } => {
+      // Priority order for Akşam 1:
+      // 1. Çavuş + Normal Er
+      // 2. Kıdemli + Normal Er
+      // 3. Dede + Normal Er
+      // 4. Dede + Kıdemli
+      // 5. Any 2 eligible
+      
+      const notAssigned = (p: Personnel) => !assignedIds.includes(p.id);
+      
+      const çavuşlar = eligible.filter(p => p.mainRole === 'Çavuş' && notAssigned(p));
+      const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal' && notAssigned(p));
+      const kıdemliErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Kıdemli' && notAssigned(p));
+      const dedeErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Dede' && notAssigned(p));
+      const tümErler = eligible.filter(p => p.mainRole === 'Er' && notAssigned(p));
+      
+      // Option 1: Çavuş + Normal Er
+      const çavuş = çavuşlar[0];
+      const normalEr = normalErler[0];
+      if (çavuş && normalEr) {
+        return { main: çavuş, secondary: normalEr };
+      }
+      
+      // Option 2: Kıdemli + Normal Er
+      const kıdemli = kıdemliErler[0];
+      if (kıdemli && normalEr) {
+        return { main: kıdemli, secondary: normalEr };
+      }
+      
+      // Option 3: Dede + Normal Er
+      const dede = dedeErler[0];
+      if (dede && normalEr) {
+        return { main: dede, secondary: normalEr };
+      }
+      
+      // Option 4: Dede + Kıdemli
+      if (dede && kıdemli) {
+        return { main: dede, secondary: kıdemli };
+      }
+      
+      // Option 5: Any 2 eligible
+      const uygun = eligible.filter(p => notAssigned(p)).slice(0, 2);
+      return { main: uygun[0] || null, secondary: uygun[1] || null };
+    };
+
     locations.forEach(location => {
       shifts.forEach(shift => {
         const count = getPersonnelCount(location, shift);
@@ -500,53 +550,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return true;
         });
 
-        // Akşam 1 Special Rule: Çavuş + 1 Er (except Çapraz which needs only 1)
+        // Akşam 1 Special Rule: Pair assignment with priority
         if (shift === 'Akşam 1') {
-          if (location === 'Çapraz') {
-            // Çapraz: Only 1 person (priority to Çavuş)
-            const cavus = eligible.find(p => p.mainRole === 'Çavuş');
-            const person = cavus || eligible[0];
-            if (person) {
-              newDuties.push({
-                id: uuidv4(),
-                personnelId: person.id,
-                location,
-                shift,
-                date: new Date(dateStr),
-                isManual: false,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              });
-            }
-          } else {
-            // Kaya1/Kaya2: Çavuş + 1 Er
-            const cavus = eligible.find(p => p.mainRole === 'Çavuş');
-            if (cavus) {
-              newDuties.push({
-                id: uuidv4(),
-                personnelId: cavus.id,
-                location,
-                shift,
-                date: new Date(dateStr),
-                isManual: false,
-                createdAt: new Date(),
-                updatedAt: new Date()
-              });
-
-              const er = eligible.find(p => p.mainRole === 'Er');
-              if (er) {
-                newDuties.push({
-                  id: uuidv4(),
-                  personnelId: er.id,
-                  location,
-                  shift,
-                  date: new Date(dateStr),
-                  isManual: false,
-                  createdAt: new Date(),
-                  updatedAt: new Date()
-                });
-              }
-            }
+          const { main, secondary } = findAkşam1Pair(eligible, assignedIds, location);
+          
+          if (main) {
+            newDuties.push({
+              id: uuidv4(),
+              personnelId: main.id,
+              location,
+              shift,
+              date: new Date(dateStr),
+              isManual: false,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+          
+          if (secondary) {
+            newDuties.push({
+              id: uuidv4(),
+              personnelId: secondary.id,
+              location,
+              shift,
+              date: new Date(dateStr),
+              isManual: false,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
+          }
+        } else if (shift === 'Gündüz 1' || shift === 'Gündüz 2') {
+          // Gündüz: Prioritize Normal Er, then Kıdemli, then Dede
+          const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
+          const kıdemliler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Kıdemli');
+          const dedeler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Dede');
+          const çavuşlar = eligible.filter(p => p.mainRole === 'Çavuş');
+          
+          const priorityOrder = [...normalErler, ...kıdemliler, ...dedeler, ...çavuşlar];
+          const selected = priorityOrder.slice(0, count);
+          
+          for (const person of selected) {
+            newDuties.push({
+              id: uuidv4(),
+              personnelId: person.id,
+              location,
+              shift,
+              date: new Date(dateStr),
+              isManual: false,
+              createdAt: new Date(),
+              updatedAt: new Date()
+            });
           }
         } else {
           // Normal assignment - use first N eligible personnel
