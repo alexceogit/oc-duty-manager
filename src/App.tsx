@@ -68,7 +68,9 @@ function DutyManager() {
   };
 
   const handleClearAutoSchedule = () => {
+    console.log('Temizle button clicked');
     if (confirm('Otomatik oluşturulan nöbetler silinsin mi?')) {
+      console.log('User confirmed, clearing auto schedule');
       clearAutoSchedule(state.currentDate);
     }
   };
@@ -249,7 +251,7 @@ function DutyManager() {
                   <div className="flex gap-2">
                     <button
                       onClick={handleClearAutoSchedule}
-                      className="btn-secondary text-red-600 dark:text-red-400"
+                      className="btn-danger"
                     >
                       Temizle
                     </button>
