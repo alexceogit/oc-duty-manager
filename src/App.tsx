@@ -13,6 +13,7 @@ import MonthlyCalendar from './components/MonthlyCalendar';
 import PersonnelFormModal from './components/PersonnelFormModal';
 import AddLeaveModal from './components/AddLeaveModal';
 import SettingsPanel from './components/SettingsPanel';
+import ConfirmationModal from './components/ConfirmationModal';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
@@ -27,6 +28,15 @@ function DutyManager() {
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showAddLeave, setShowAddLeave] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Confirmation modal state
+  const [showConfirmation, setShowConfirmation] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    variant?: 'danger' | 'warning' | 'info';
+  }>({ isOpen: false, title: '', message: '', onConfirm: () => {} });
 
   const tabs: { id: Tab; label: string; icon: string }[] = [
     { id: 'personnel', label: 'Personel', icon: '👥' },
@@ -62,17 +72,23 @@ function DutyManager() {
   };
 
   const handleAutoSchedule = () => {
-    if (confirm(`${state.currentDate.toLocaleDateString('tr-TR')} tarihi için otomatik nöbet oluşturulsun mu?`)) {
-      runAutoSchedule(state.currentDate);
-    }
+    setShowConfirmation({
+      isOpen: true,
+      title: 'Otomatik Nöbet Oluştur',
+      message: `${state.currentDate.toLocaleDateString('tr-TR')} tarihi için otomatik nöbet oluşturulsun mu?`,
+      onConfirm: () => runAutoSchedule(state.currentDate),
+      variant: 'info'
+    });
   };
 
-  const handleClearAutoSchedule = async () => {
-    if (!confirm('⚠️ DİKKAT!\n\nBu işlem seçili tarihteki TÜM nöbetleri (manuel + otomatik) silecektir.\n\nEmin misiniz?')) {
-      return;
-    }
-    
-    await clearAutoSchedule(state.currentDate);
+  const handleClearAutoSchedule = () => {
+    setShowConfirmation({
+      isOpen: true,
+      title: '⚠️ Nöbetleri Sil',
+      message: 'Bu işlem seçili tarihteki TÜM nöbetleri (manuel + otomatik) silecektir.\n\nEmin misiniz?',
+      onConfirm: () => clearAutoSchedule(state.currentDate),
+      variant: 'danger'
+    });
   };
 
   const handleSignOut = async () => {
@@ -300,6 +316,16 @@ function DutyManager() {
       {showAddLeave && (
         <AddLeaveModal onClose={() => setShowAddLeave(false)} />
       )}
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmation.isOpen}
+        onClose={() => setShowConfirmation(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={showConfirmation.onConfirm}
+        title={showConfirmation.title}
+        message={showConfirmation.message}
+        variant={showConfirmation.variant}
+      />
     </div>
   );
 }

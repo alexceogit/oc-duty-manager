@@ -185,7 +185,25 @@ export default function DutyScheduler() {
             {/* Shifts */}
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {shifts.map(shift => {
-                const slotDuties = dutiesBySlot[`${location}-${shift}`] || [];
+                let slotDuties = dutiesBySlot[`${location}-${shift}`] || [];
+                
+                // Sort by seniority: Çavuş > Kıdemli > Normal > Dede
+                const seniorityOrder: Record<string, number> = {
+                  'Çavuş': 0,
+                  'Kıdemli': 1,
+                  'Normal': 2,
+                  'Dede': 3
+                };
+                slotDuties.sort((a, b) => {
+                  const personA = state.personnel.find(p => p.id === a.personnelId);
+                  const personB = state.personnel.find(p => p.id === b.personnelId);
+                  if (a.isDevriye) return 1;
+                  if (b.isDevriye) return -1;
+                  const orderA = personA ? seniorityOrder[personA.seniority] || 99 : 99;
+                  const orderB = personB ? seniorityOrder[personB.seniority] || 99 : 99;
+                  return orderA - orderB;
+                });
+                
                 const isMultiPerson = location !== 'Çapraz' && (shift === 'Akşam 1' || shift === 'Gece 1' || shift === 'Gece 2');
                 const maxPersonnel = isMultiPerson ? 2 : 1;
 

@@ -64,10 +64,18 @@ export default function MonthlyCalendar() {
     const dateKey = date.toISOString().split('T')[0];
     const assignment = assignmentsByDate.get(dateKey);
     
-    if (!assignment) return 'empty';
+    // Check if any assignment exists
+    const hasAnyAssignment = assignment && (
+      assignment.nizamiye || 
+      assignment.yirmiDortcu || 
+      assignment.santralGündüz || 
+      assignment.santralGece
+    );
     
-    const hasYirmiDortcu = !!assignment.yirmiDortcu;
-    const hasSantral = !!assignment.santralGündüz && !!assignment.santralGece;
+    if (!hasAnyAssignment) return 'empty';
+    
+    const hasYirmiDortcu = !!assignment?.yirmiDortcu;
+    const hasSantral = !!assignment?.santralGündüz && !!assignment?.santralGece;
     
     if (hasYirmiDortcu && hasSantral) return 'complete';
     return 'incomplete';
@@ -238,9 +246,31 @@ export default function MonthlyCalendar() {
                   </div>
                 )}
                 
-                {!assignment && (
+                {/* Show partial assignments or empty */}
+                {!assignment.nizamiye && !assignment.yirmiDortcu && !assignment.santralGündüz && !assignment.santralGece && (
                   <div className="text-xs text-gray-400 dark:text-gray-500">
                     Atama yok
+                  </div>
+                )}
+                
+                {/* Has some assignments but Nizamiye is missing */}
+                {assignment && !assignment.nizamiye && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Nizamiye eksik
+                  </div>
+                )}
+                
+                {/* 24cü missing */}
+                {assignment && !assignment.yirmiDortcu && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ 24cü eksik
+                  </div>
+                )}
+                
+                {/* Santral missing */}
+                {assignment && (!assignment.santralGündüz || !assignment.santralGece) && (
+                  <div className="text-xs text-amber-600 dark:text-amber-400">
+                    ⚠️ Santral eksik
                   </div>
                 )}
               </button>
