@@ -179,6 +179,10 @@ function camelToSnake(obj: any): any {
   if (obj === null || typeof obj !== 'object') {
     return obj;
   }
+  // Handle Date objects - convert to ISO string
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
   
   const result: any = {};
   for (const key of Object.keys(obj)) {
@@ -195,6 +199,10 @@ function snakeToCamel(obj: any): any {
   }
   if (obj === null || typeof obj !== 'object') {
     return obj;
+  }
+  // Handle Date objects - convert from ISO string
+  if (typeof obj === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(obj)) {
+    return new Date(obj);
   }
   
   const result: any = {};
@@ -303,7 +311,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const { error } = await supabaseHelpers.addLeave(camelToSnake({ ...newLeave, created_at: newLeave.createdAt.toISOString() }));
     if (error) {
       console.error('Add leave error:', error);
-      throw new Error(error.message || 'İzin eklenirken hata oluştu');
+      throw new Error(typeof error === 'string' ? error : error?.message || 'İzin eklenirken hata oluştu');
     }
   }
 
