@@ -29,6 +29,7 @@ export type DutyLocation =
   | 'Kaya1' 
   | 'Kaya2' 
   | 'Nizamiye' 
+  | '24cü'
   | 'Santral';
 
 // Shift types for Çapraz, Kaya1, Kaya2
@@ -38,7 +39,9 @@ export type ShiftType =
   | 'Gündüz 2'   // 12:00 - 18:00 (6 saat)
   | 'Akşam 1'    // 18:00 - 22:00 (4 saat)
   | 'Gece 1'     // 22:00 - 02:00 (4 saat)
-  | 'Gece 2';    // 02:00 - 06:00 (4 saat)
+  | 'Gece 2'     // 02:00 - 06:00 (4 saat)
+  | 'Santral Gündüz'  // 08:00 - 20:00 (12 saat)
+  | 'Santral Gece';   // 20:00 - 08:00 (12 saat)
 
 // Personnel interface
 export interface Personnel {

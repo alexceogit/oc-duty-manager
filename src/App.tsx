@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import PersonnelList from './components/PersonnelList';
 import LeaveManager from './components/LeaveManager';
 import DutyScheduler from './components/DutyScheduler';
+import MonthlyCalendar from './components/MonthlyCalendar';
 import PersonnelFormModal from './components/PersonnelFormModal';
 import AddLeaveModal from './components/AddLeaveModal';
 import SettingsPanel from './components/SettingsPanel';
@@ -16,7 +17,7 @@ import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import './index.css';
 
-type Tab = 'personnel' | 'leaves' | 'duties' | 'settings';
+type Tab = 'personnel' | 'leaves' | 'duties' | 'monthly' | 'settings';
 
 // Main App Content (protected)
 function DutyManager() {
@@ -31,6 +32,7 @@ function DutyManager() {
     { id: 'personnel', label: 'Personel', icon: '👥' },
     { id: 'leaves', label: 'İzinler', icon: '🏖️' },
     { id: 'duties', label: 'Nöbetler', icon: '🗓️' },
+    { id: 'monthly', label: 'Aylık Takvim', icon: '📅' },
     { id: 'settings', label: 'Ayarlar', icon: '⚙️' },
   ];
 
@@ -263,6 +265,18 @@ function DutyManager() {
                   </div>
                 </div>
                 <DutyScheduler />
+              </div>
+            )}
+
+            {activeTab === 'monthly' && (
+              <div className="space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  📅 Aylık Nöbet Takvimi
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Nizamiye, 24cü ve Santral için aylık planlama. Günlere tıklayarak atama yapın.
+                </p>
+                <MonthlyCalendar />
               </div>
             )}
 

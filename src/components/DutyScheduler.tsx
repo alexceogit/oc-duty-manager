@@ -9,12 +9,14 @@ import type { DutyLocation, ShiftType } from '../types';
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
 const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
 
-const shiftTimeRanges: Record<ShiftType, string> = {
+const shiftTimeRanges: Partial<Record<ShiftType, string>> = {
   'Gündüz 1': '06:00 - 12:00',
   'Gündüz 2': '12:00 - 18:00',
   'Akşam 1': '18:00 - 22:00',
   'Gece 1': '22:00 - 02:00',
-  'Gece 2': '02:00 - 06:00'
+  'Gece 2': '02:00 - 06:00',
+  'Santral Gündüz': '08:00 - 20:00',
+  'Santral Gece': '20:00 - 08:00'
 };
 
 export default function DutyScheduler() {

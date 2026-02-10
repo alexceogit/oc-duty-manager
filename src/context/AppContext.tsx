@@ -428,20 +428,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const locations = ['Çapraz', 'Kaya1', 'Kaya2'] as const;
     const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
     
-    // Gece shifts have 2 people (except Çapraz)
-    const personnelPerShift: Record<string, number> = {
-      'Çapraz': 1,
-      'Kaya1': 1,
-      'Kaya2': 1,
-      'Gece 1': 2,  // 2 people at night
-      'Gece 2': 2   // 2 people at night
+    // Personnel count per location and shift
+    const getPersonnelCount = (location: string, shift: string): number => {
+      // Çapraz: Always 1 person for all shifts
+      if (location === 'Çapraz') return 1;
+      // Kaya1/Kaya2: Gündüz = 1 person, Akşam/Gece = 2 people
+      if (shift === 'Gündüz 1' || shift === 'Gündüz 2') return 1;
+      return 2; // Akşam 1, Gece 1, Gece 2
     };
 
     const newDuties: DutyAssignment[] = [];
 
     locations.forEach(location => {
       shifts.forEach(shift => {
-        const count = personnelPerShift[shift] || 1;
+        const count = getPersonnelCount(location, shift);
         const assignedIds = newDuties
           .filter(d => d.location === location && d.shift === shift && new Date(d.date).toISOString().split('T')[0] === dateStr)
           .map(d => d.personnelId);
@@ -459,26 +459,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return true;
         });
 
-        // 18:00-22:00 Special Rule: Çavuş + 1 Er
+        // Akşam 1 Special Rule: Çavuş + 1 Er (except Çapraz which needs only 1)
         if (shift === 'Akşam 1') {
-          const cavus = eligible.find(p => p.mainRole === 'Çavuş');
-          if (cavus) {
-            newDuties.push({
-              id: uuidv4(),
-              personnelId: cavus.id,
-              location,
-              shift,
-              date: new Date(dateStr),
-              isManual: false,
-              createdAt: new Date(),
-              updatedAt: new Date()
-            });
-
-            const er = eligible.find(p => p.mainRole === 'Er');
-            if (er) {
+          if (location === 'Çapraz') {
+            // Çapraz: Only 1 person (priority to Çavuş)
+            const cavus = eligible.find(p => p.mainRole === 'Çavuş');
+            const person = cavus || eligible[0];
+            if (person) {
               newDuties.push({
                 id: uuidv4(),
-                personnelId: er.id,
+                personnelId: person.id,
                 location,
                 shift,
                 date: new Date(dateStr),
@@ -486,6 +476,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 createdAt: new Date(),
                 updatedAt: new Date()
               });
+            }
+          } else {
+            // Kaya1/Kaya2: Çavuş + 1 Er
+            const cavus = eligible.find(p => p.mainRole === 'Çavuş');
+            if (cavus) {
+              newDuties.push({
+                id: uuidv4(),
+                personnelId: cavus.id,
+                location,
+                shift,
+                date: new Date(dateStr),
+                isManual: false,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+
+              const er = eligible.find(p => p.mainRole === 'Er');
+              if (er) {
+                newDuties.push({
+                  id: uuidv4(),
+                  personnelId: er.id,
+                  location,
+                  shift,
+                  date: new Date(dateStr),
+                  isManual: false,
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                });
+              }
             }
           }
         } else {
