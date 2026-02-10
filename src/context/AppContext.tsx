@@ -544,6 +544,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             
             // 8-hour gap check from ANY previous assignment (across ALL locations)
             let hasGap = true;
+            let conflictFound = false;
             for (const duty of newDuties.filter(d => d.personnelId === person.id)) {
               if (!duty.shift) continue;
               const existingEnd = shiftTimes[duty.shift].end;
@@ -554,13 +555,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
               } else {
                 gap = newStart - existingEnd;
               }
+              console.log(`Gap check: ${person.firstName} ${person.lastName} - ${duty.location} ${duty.shift} → ${ln.location} ${shift}: gap=${gap}h`);
               if (gap < 8) {
                 hasGap = false;
+                conflictFound = true;
                 break;
               }
             }
             
-            if (!hasGap) {
+            if (conflictFound) {
+              console.log(`REJECTING ${person.firstName} ${person.lastName}: insufficient gap for ${ln.location} ${shift}`);
               personIndex++;
               continue;
             }
