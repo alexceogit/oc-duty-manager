@@ -216,6 +216,12 @@ function snakeToCamel(obj: any): any {
 // Provider
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  
+  // Use ref to track latest state for stale closure fixes
+  const stateRef = React.useRef(state);
+  React.useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
 
   // Initialize Supabase data on mount
   useEffect(() => {
@@ -668,7 +674,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   async function clearAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
-    const autoDuties = state.duties.filter(d => new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual);
+    const currentDuties = stateRef.current.duties;
+    const autoDuties = currentDuties.filter(d => new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual);
+    
+    console.log(`Clearing ${autoDuties.length} auto-schedule duties`);
     
     for (const duty of autoDuties) {
       dispatch({ type: 'DELETE_DUTY', payload: duty.id });
