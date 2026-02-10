@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { DutyLocation, ShiftType } from '../types';
 
@@ -9,14 +9,24 @@ interface AddDutyModalProps {
   shift: ShiftType;
   date: Date;
   existingAssignmentId?: string;
+  initialDevriye?: boolean;
 }
 
-export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId }: AddDutyModalProps) {
+export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId, initialDevriye = false }: AddDutyModalProps) {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
   const [isDevriye, setIsDevriye] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset state when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedPersonnelId(null);
+      setIsDevriye(false);
+      setError(null);
+    }
+  }, [isOpen]);
 
   const dateStr = date.toISOString().split('T')[0];
 
@@ -71,7 +81,7 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
       } else {
         // Normal personnel assignment
         await addDuty({
-          personnelId: selectedPersonnelId,
+          personnelId: selectedPersonnelId || '',
           location,
           shift,
           date: new Date(dateStr),

@@ -27,7 +27,11 @@ export default function DutyScheduler() {
   
   // Modal state for adding manual duty
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [addModalData, setAddModalData] = useState<{ location: DutyLocation; shift: ShiftType } | null>(null);
+  const [addModalData, setAddModalData] = useState<{ 
+    location: DutyLocation; 
+    shift: ShiftType;
+    isDevriye?: boolean;
+  } | null>(null);
 
   const dateStr = state.currentDate.toISOString().split('T')[0];
 
