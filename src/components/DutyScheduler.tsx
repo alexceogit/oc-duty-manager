@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { DutyLocation, ShiftType } from '../types';
+import { AddDutyModal } from './AddDutyModal';
 
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
 const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
@@ -23,6 +24,10 @@ export default function DutyScheduler() {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedLocation, setSelectedLocation] = useState<DutyLocation | 'Hepsi'>('Hepsi');
   const [draggedPersonnel, setDraggedPersonnel] = useState<string | null>(null);
+  
+  // Modal state for adding manual duty
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [addModalData, setAddModalData] = useState<{ location: DutyLocation; shift: ShiftType } | null>(null);
 
   const dateStr = state.currentDate.toISOString().split('T')[0];
 
@@ -239,12 +244,22 @@ export default function DutyScheduler() {
                         );
                       })}
 
-                      {/* Empty Slots */}
+                      {/* Empty Slots with + Button */}
                       {slotDuties.length < maxPersonnel && (
-                        <div className="text-center py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
-                          <p className="text-xs text-gray-500">
-                            {maxPersonnel - slotDuties.length} slot boş
-                          </p>
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from({ length: maxPersonnel - slotDuties.length }).map((_, i) => (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                setAddModalData({ location, shift });
+                                setIsAddModalOpen(true);
+                              }}
+                              className="flex-1 min-w-[80px] py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors group"
+                              title="Manuel nöbet ekle"
+                            >
+                              <span className="text-gray-400 group-hover:text-blue-500 text-lg font-bold">+</span>
+                            </button>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -255,6 +270,20 @@ export default function DutyScheduler() {
           </div>
         ))}
       </div>
+
+      {/* Add Duty Modal */}
+      {addModalData && (
+        <AddDutyModal
+          isOpen={isAddModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setAddModalData(null);
+          }}
+          location={addModalData.location}
+          shift={addModalData.shift}
+          date={state.currentDate}
+        />
+      )}
 
       {/* Available Personnel */}
       <div className="bg-white dark:bg-slate-800 rounded-xl p-4">
