@@ -204,30 +204,40 @@ export default function DutyScheduler() {
                     {/* Assigned Personnel */}
                     <div className="space-y-2">
                       {slotDuties.map(duty => {
-                        const person = state.personnel.find(p => p.id === duty.personnelId);
-                        if (!person) return null;
+                        const isDevriye = duty.personnelId === 'devriye-placeholder' || duty.isDevriye;
+                        const person = !isDevriye ? state.personnel.find(p => p.id === duty.personnelId) : null;
 
                         return (
                           <div
                             key={duty.id}
                             className={`flex items-center justify-between p-2 rounded-lg ${
-                              duty.isManual ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+                              isDevriye 
+                                ? 'bg-orange-100 dark:bg-orange-900/30 border-2 border-orange-400 dark:border-orange-600' 
+                                : duty.isManual 
+                                  ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800' 
+                                  : 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
                             }`}
                           >
                             <div className="flex items-center gap-2">
-                              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                                person.seniority === 'Dede' ? 'bg-purple-100 text-purple-700' :
-                                person.seniority === 'Kıdemli' ? 'bg-blue-100 text-blue-700' :
-                                'bg-green-100 text-green-700'
-                              }`}>
-                                {person.firstName[0]}{person.lastName[0]}
-                              </div>
+                              {isDevriye ? (
+                                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold bg-orange-200 text-orange-700">
+                                  D
+                                </div>
+                              ) : (
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                  person?.seniority === 'Dede' ? 'bg-purple-100 text-purple-700' :
+                                  person?.seniority === 'Kıdemli' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-green-100 text-green-700'
+                                }`}>
+                                  {person?.firstName[0]}{person?.lastName[0]}
+                                </div>
+                              )}
                               <div>
                                 <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                  {person.firstName} {person.lastName}
+                                  {isDevriye ? '🚨 DEVRİYE' : `${person?.firstName} ${person?.lastName}`}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                  {person.mainRole}
+                                  {isDevriye ? 'Devriye atanacak' : person?.mainRole}
                                 </p>
                               </div>
                             </div>

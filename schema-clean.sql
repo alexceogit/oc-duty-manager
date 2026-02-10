@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS duty_assignments (
   shift TEXT CHECK (shift IN ('Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2', 'Santral Gündüz', 'Santral Gece')),
   date DATE NOT NULL,
   is_manual BOOLEAN DEFAULT false,
+  is_devriye BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

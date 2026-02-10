@@ -14,6 +14,7 @@ interface AddDutyModalProps {
 export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId }: AddDutyModalProps) {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
+  const [isDevriye, setIsDevriye] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,13 +57,27 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
       }
 
       // Add the new duty
-      await addDuty({
-        personnelId: selectedPersonnelId,
-        location,
-        shift,
-        date: new Date(dateStr),
-        isManual: true
-      });
+      if (isDevriye) {
+        // Devriye assignment - use a special ID
+        await addDuty({
+          personnelId: 'devriye-placeholder',
+          location,
+          shift,
+          date: new Date(dateStr),
+          isManual: true,
+          isDevriye: true
+        });
+      } else {
+        // Normal personnel assignment
+        await addDuty({
+          personnelId: selectedPersonnelId,
+          location,
+          shift,
+          date: new Date(dateStr),
+          isManual: true,
+          isDevriye: false
+        });
+      }
 
       onClose();
     } catch (err: any) {
@@ -74,6 +89,7 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
 
   const handleClose = () => {
     setSelectedPersonnelId(null);
+    setIsDevriye(false);
     setError(null);
     onClose();
   };
@@ -126,13 +142,38 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
           </div>
         </div>
 
+        {/* Devriye Toggle */}
+        <div className="mb-4">
+          <label className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={isDevriye}
+              onChange={(e) => {
+                setIsDevriye(e.target.checked);
+                if (e.target.checked) {
+                  setSelectedPersonnelId(null);
+                }
+              }}
+              className="w-5 h-5 text-amber-600 rounded focus:ring-amber-500"
+            />
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">DEVRİYE Olarak İşaretle</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Personel atanmadan boş olarak işaretle</p>
+            </div>
+          </label>
+        </div>
+
         {/* Personnel Selection */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Personel Seçin
           </label>
           
-          {availablePersonnel.length === 0 ? (
+          {isDevriye ? (
+            <div className="text-center py-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-600">
+              <p className="text-gray-500">Devriye seçildi - personel atanmayacak</p>
+            </div>
+          ) : availablePersonnel.length === 0 ? (
             <div className="text-center py-4 text-gray-500">
               <p>Uygun personel bulunamadı.</p>
               <p className="text-sm mt-1">Bu vardiya için tüm personel zaten atanmış olabilir.</p>
@@ -184,10 +225,10 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!selectedPersonnelId || isSubmitting}
+            disabled={(!selectedPersonnelId && !isDevriye) || isSubmitting}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Ekleniyor...' : 'Nöbet Ekle'}
+            {isSubmitting ? 'Ekleniyor...' : isDevriye ? 'Devriye Olarak Kaydet' : 'Nöbet Ekle'}
           </button>
         </div>
       </div>

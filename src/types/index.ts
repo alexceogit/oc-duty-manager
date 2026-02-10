@@ -78,6 +78,7 @@ export interface DutyAssignment {
   shift?: ShiftType;
   date: Date;
   isManual: boolean;
+  isDevriye?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
