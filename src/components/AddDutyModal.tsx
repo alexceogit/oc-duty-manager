@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
-import { Personnel, DutyLocation, ShiftType } from '../types';
+import type { DutyLocation, ShiftType } from '../types';
 
 interface AddDutyModalProps {
   isOpen: boolean;

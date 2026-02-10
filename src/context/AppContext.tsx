@@ -441,8 +441,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .map(d => d.personnelId);
     };
 
-    // Sort shifts by time order: Gündüz 1 → Gündüz 2 → Akşam 1 → Gece 1 → Gece 2
-    const shiftOrder: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
+    // Sort shifts by time order: Akşam → Gece → Gündöz (starting from 18:00)
+    const shiftOrder: ShiftType[] = ['Akşam 1', 'Gece 1', 'Gece 2', 'Gündüz 1', 'Gündüz 2'];
 
     // Process each shift SEQUENTIALLY
     for (const shift of shiftOrder) {

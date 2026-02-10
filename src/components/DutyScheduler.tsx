@@ -8,7 +8,7 @@ import type { DutyLocation, ShiftType } from '../types';
 import { AddDutyModal } from './AddDutyModal';
 
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
-const shifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
+const shifts: ShiftType[] = ['Akşam 1', 'Gece 1', 'Gece 2', 'Gündüz 1', 'Gündüz 2'];
 
 const shiftTimeRanges: Partial<Record<ShiftType, string>> = {
   'Gündüz 1': '06:00 - 12:00',
@@ -182,8 +182,8 @@ export default function DutyScheduler() {
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {shifts.map(shift => {
                 const slotDuties = dutiesBySlot[`${location}-${shift}`] || [];
-                const isNight = shift === 'Gece 1' || shift === 'Gece 2';
-                const maxPersonnel = isNight && location !== 'Çapraz' ? 2 : 1;
+                const isMultiPerson = location !== 'Çapraz' && (shift === 'Akşam 1' || shift === 'Gece 1' || shift === 'Gece 2');
+                const maxPersonnel = isMultiPerson ? 2 : 1;
 
                 return (
                   <div
