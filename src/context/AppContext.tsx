@@ -268,15 +268,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           if (exemptions) {
             dispatch({ type: 'SET_EXEMPTIONS', payload: snakeToCamel(exemptions) as any });
           }
-        } else {
-          // No Supabase data - start with empty state
-          console.log('📦 Starting with empty data (no mock data)');
         }
         
         dispatch({ type: 'SET_LOADING', payload: false });
       } else {
         // No Supabase configured - start with empty state
-        console.log('📦 Starting with empty data (no Supabase configured)');
         dispatch({ type: 'SET_SUPABASE_STATUS', payload: false });
       }
     }
@@ -561,7 +557,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
               } else {
                 gap = newStart - existingEnd;
               }
-              console.log(`Gap check: ${person.firstName} ${person.lastName} - ${duty.location} ${duty.shift} → ${ln.location} ${shift}: gap=${gap}h`);
               if (gap < 8) {
                 conflictFound = true;
                 break;
@@ -569,7 +564,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
             
             if (conflictFound) {
-              console.log(`REJECTING ${person.firstName} ${person.lastName}: insufficient gap for ${ln.location} ${shift}`);
               personIndex++;
               continue;
             }
@@ -590,7 +584,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         
         // DEVRIYE FALLBACK: If still need personnel, assign Devriye
-        // Priority order: Gece 2 → Gece 1 → Akşam 1 (later shifts get Devriye first)
         if (assignedCount < needed) {
           const devriyePriority = ['Gece 2', 'Gece 1', 'Akşam 1'];
           const devriyeOrderIndex = devriyePriority.indexOf(shift);
@@ -602,7 +595,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             ).length;
             
             if (currentDevriyeCount < (needed - assignedCount)) {
-              console.log(`Assigning DEVRİYE for ${ln.location} ${shift} (insufficient personnel)`);
               newDuties.push({
                 id: uuidv4(),
                 personnelId: 'devriye-placeholder',
@@ -621,9 +613,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // Save all new duties to database
-    console.log(`Saving ${newDuties.length} duties to database...`);
     for (const duty of newDuties) {
-      console.log('Saving duty:', duty);
       dispatch({ type: 'ADD_DUTY', payload: duty });
       
       if (duty.isDevriye) {
@@ -651,8 +641,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         if (error) {
           console.error('Auto-schedule add duty error:', error);
-        } else {
-          console.log('Duty saved successfully:', duty.id);
         }
       }
     }
@@ -681,9 +669,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       new Date(d.date).toISOString().split('T')[0] === dateStr
     );
     
-    console.log('All duties for date:', allDutiesForDate.length);
-    
-    alert(`🧹 Temizlik başladı\n📅 Tarih: ${dateStr}\n👥 Silinecek nöbet: ${allDutiesForDate.length}\n\nNOT: Tüm nöbetler (manuel + otomatik) silinecek`);
+    if (allDutiesForDate.length === 0) {
+      return; // Nothing to clear
+    }
     
     // Dispatch loading state
     dispatch({ type: 'SET_LOADING', payload: true });
@@ -694,10 +682,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       // Delete each duty from Supabase
       for (const duty of allDutiesForDate) {
-        console.log(`Deleting: ${duty.id} - ${duty.location} ${duty.shift}`);
         const { error } = await supabaseHelpers.deleteDuty(duty.id);
         if (error) {
-          console.error(`Delete error:`, error);
           errorCount++;
         } else {
           successCount++;
@@ -707,11 +693,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Clear all duties for this date from local state
       dispatch({ type: 'SET_DUTIES_FOR_DATE', payload: { date: dateStr, duties: [] } });
       
-      alert(`✅ Temizlik tamamlandı!\n\n📊 Başarılı: ${successCount}\n❌ Hata: ${errorCount}`);
-      
     } catch (err) {
       console.error('Error:', err);
-      alert(`❌ Hata oluştu: ${err}`);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
