@@ -480,6 +480,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
       );
     };
 
+    // Helper to check if person is already assigned at the same time (any location)
+    const isPersonAssignedAtTime = (personnelId: string, shift: string): boolean => {
+      // Define overlapping shifts (same time period)
+      const shiftGroups: Record<string, string[]> = {
+        'Gündüz 1': ['Gündüz 1'],
+        'Gündüz 2': ['Gündüz 2'],
+        'Akşam 1': ['Akşam 1'],
+        'Gece 1': ['Gece 1'],
+        'Gece 2': ['Gece 2']
+      };
+      
+      const overlappingShifts = shiftGroups[shift] || [shift];
+      return newDuties.some(d => 
+        d.personnelId === personnelId && 
+        overlappingShifts.includes(d.shift || '')
+      );
+    };
+
     const newDuties: DutyAssignment[] = [];
 
     // Sort shifts by time order: Gündüz 1 → Gündüz 2 → Akşam 1 → Gece 1 → Gece 2
@@ -498,6 +516,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           // Already assigned to this location+shift?
           if (assignedIds.includes(p.id)) return false;
           
+          // Already assigned at same time (any location)?
+          if (isPersonAssignedAtTime(p.id, shift)) return false;
+          
           // Max duties check
           const personDuties = newDuties.filter(d => d.personnelId === p.id);
           const maxDuties = p.seniority === 'Normal' ? 2 : 1;
@@ -514,12 +535,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
           
           // 8-hour gap check
           if (!has8HourGap(p.id, shift)) return false;
-          
-          // LOCATION ROTATION: Don't assign same person to same location morning + evening
-          if ((shift === 'Akşam 1' || shift === 'Gece 1' || shift === 'Gece 2') && 
-              workedAtLocationThisMorning(p.id, location)) {
-            return false;
-          }
           
           return true;
         });
