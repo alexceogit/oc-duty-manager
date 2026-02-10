@@ -470,16 +470,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return true;
     };
 
-    // Helper to check if person worked at same location in morning shifts
-    const workedAtLocationThisMorning = (personnelId: string, location: string): boolean => {
-      // Check if person was assigned to this location in Gündüz 1 or Gündüz 2
-      return newDuties.some(d => 
-        d.personnelId === personnelId && 
-        d.location === location &&
-        (d.shift === 'Gündüz 1' || d.shift === 'Gündüz 2')
-      );
-    };
-
     // Helper to check if person is already assigned at the same time (any location)
     const isPersonAssignedAtTime = (personnelId: string, shift: string): boolean => {
       // Define overlapping shifts (same time period)
@@ -500,122 +490,117 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const newDuties: DutyAssignment[] = [];
 
+    // Helper to get all currently assigned personnel IDs for this shift (any location)
+    const getAssignedForShift = (shift: string): string[] => {
+      return newDuties
+        .filter(d => d.shift === shift && new Date(d.date).toISOString().split('T')[0] === dateStr)
+        .map(d => d.personnelId);
+    };
+
     // Sort shifts by time order: Gündüz 1 → Gündüz 2 → Akşam 1 → Gece 1 → Gece 2
     const shiftOrder: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
 
-    // Process shifts in order to track assignments
+    // Process each shift SEQUENTIALLY
     for (const shift of shiftOrder) {
-      for (const location of locations) {
-        const count = getPersonnelCount(location, shift);
-        const assignedIds = newDuties
-          .filter(d => d.location === location && d.shift === shift && new Date(d.date).toISOString().split('T')[0] === dateStr)
-          .map(d => d.personnelId);
+      // Get all already assigned personnel for this shift
+      const alreadyAssigned = getAssignedForShift(shift);
+      
+      // Calculate personnel needed for each location in this shift
+      const locationNeeds = locations.map(location => ({
+        location,
+        needed: getPersonnelCount(location, shift)
+      }));
 
-        // Find eligible personnel for this shift
-        let eligible = sortedPersonnel.filter(p => {
-          // Already assigned to this location+shift?
-          if (assignedIds.includes(p.id)) return false;
-          
-          // Already assigned at same time (any location)?
-          if (isPersonAssignedAtTime(p.id, shift)) return false;
-          
-          // Max duties check
-          const personDuties = newDuties.filter(d => d.personnelId === p.id);
-          const maxDuties = p.seniority === 'Normal' ? 2 : 1;
-          if (personDuties.length >= maxDuties) return false;
-          
-          // Subrole exclusion
-          if (p.subRole && state.settings.excludeSubRoles.includes(p.subRole)) return false;
-          
-          // Dede night restriction
-          if (p.seniority === 'Dede' && (shift === 'Gece 1' || shift === 'Gece 2')) return false;
-          
-          // Exemptions check
-          if (hasExemption(p.id, location, shift)) return false;
-          
-          // 8-hour gap check
-          if (!has8HourGap(p.id, shift)) return false;
-          
-          return true;
-        });
-
-        // === SPECIAL RULES PER SHIFT ===
-
-        if (location === 'Çapraz') {
-          // Çapraz: Always 1 person, prioritize Normal Er
-          const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
-          const prioritized = [...normalErler, ...eligible.filter(p => !normalErler.includes(p))];
-          const selected = prioritized.slice(0, 1);
-          
-          for (const person of selected) {
-            newDuties.push(createDutyAssignment(person.id, location, shift, dateStr));
+      // Calculate total needed
+      const totalNeeded = locationNeeds.reduce((sum, ln) => sum + ln.needed, 0);
+      
+      // Get eligible personnel for this shift
+      let eligible = sortedPersonnel.filter(p => {
+        // Already assigned in this shift?
+        if (alreadyAssigned.includes(p.id)) return false;
+        
+        // Max duties check
+        const personDuties = newDuties.filter(d => d.personnelId === p.id);
+        const maxDuties = p.seniority === 'Normal' ? 2 : 1;
+        if (personDuties.length >= maxDuties) return false;
+        
+        // Subrole exclusion
+        if (p.subRole && state.settings.excludeSubRoles.includes(p.subRole)) return false;
+        
+        // Dede night restriction
+        if (p.seniority === 'Dede' && (shift === 'Gece 1' || shift === 'Gece 2')) return false;
+        
+        // Exemptions check
+        const hasExemp = state.exemptions.some(e => 
+          e.personnelId === p.id && e.isActive && 
+          ((e.exemptionType === 'shift' && e.targetValue === shift) ||
+           (e.exemptionType === 'location' && locationNeeds.some(ln => e.targetValue === ln.location)) ||
+           (e.exemptionType === 'shift_location' && e.targetValue.includes(shift)))
+        );
+        if (hasExemp) return false;
+        
+        // 8-hour gap check
+        const personDutiesToday = newDuties.filter(d => 
+          d.personnelId === p.id && new Date(d.date).toISOString().split('T')[0] === dateStr
+        );
+        let hasGap = true;
+        for (const duty of personDutiesToday) {
+          if (!duty.shift) continue;
+          const existingEnd = shiftTimes[duty.shift].end;
+          const newStart = shiftTimes[shift].start;
+          let gap: number;
+          if (existingEnd > newStart) {
+            gap = (24 - existingEnd) + newStart;
+          } else {
+            gap = newStart - existingEnd;
+          }
+          if (gap < 8) {
+            hasGap = false;
+            break;
           }
         }
-        else if (shift === 'Gündüz 1' || shift === 'Gündüz 2') {
-          // Gündüz: Prioritize Normal Er
-          const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
-          const prioritized = [...normalErler, ...eligible.filter(p => !normalErler.includes(p))];
-          const selected = prioritized.slice(0, count);
-          
-          for (const person of selected) {
-            newDuties.push(createDutyAssignment(person.id, location, shift, dateStr));
+        if (!hasGap) return false;
+        
+        return true;
+      });
+
+      // Sort eligible by seniority priority
+      eligible = eligible.sort((a, b) => {
+        const priority = state.settings.priorityOrder;
+        return priority.indexOf(a.seniority) - priority.indexOf(b.seniority);
+      });
+
+      // Assign personnel to locations
+      let personIndex = 0;
+      
+      for (const ln of locationNeeds) {
+        const needed = ln.needed;
+        const assignedForLocation: Personnel[] = [];
+        
+        for (let i = 0; i < needed && personIndex < eligible.length; i++) {
+          // Find next eligible person who can work at this location
+          while (personIndex < eligible.length) {
+            const person = eligible[personIndex];
+            
+            // Check if this person has exemption for this location
+            const hasExemp = state.exemptions.some(e => 
+              e.personnelId === person.id && e.isActive && 
+              ((e.exemptionType === 'location' && e.targetValue === ln.location) ||
+               (e.exemptionType === 'shift_location' && e.targetValue === `${shift}|${ln.location}`))
+            );
+            
+            if (!hasExemp) {
+              assignedForLocation.push(person);
+              personIndex++;
+              break;
+            }
+            personIndex++;
           }
         }
-        else if (shift === 'Akşam 1') {
-          // Akşam 1: TWO people, priority order:
-          // 1. Normal Er + Kıdemli Er
-          // 2. Normal Er + Çavuş
-          // 3. Normal Er + Normal Er
-          // 4. Normal Er + Dede
-          // 5. Kıdemli Er + Dede
-          // 6. Any 2 eligible
-          
-          const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
-          const çavuşlar = eligible.filter(p => p.mainRole === 'Çavuş');
-          const kıdemliErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Kıdemli');
-          const dedeErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Dede');
-          
-          const selected: Personnel[] = [];
-          
-          // Option 1: Normal Er + Kıdemli Er
-          if (normalErler.length >= 1 && kıdemliErler.length >= 1) {
-            selected.push(normalErler[0], kıdemliErler[0]);
-          }
-          // Option 2: Normal Er + Çavuş
-          else if (normalErler.length >= 1 && çavuşlar.length >= 1) {
-            selected.push(normalErler[0], çavuşlar[0]);
-          }
-          // Option 3: Normal Er + Normal Er
-          else if (normalErler.length >= 2) {
-            selected.push(normalErler[0], normalErler[1]);
-          }
-          // Option 4: Normal Er + Dede
-          else if (normalErler.length >= 1 && dedeErler.length >= 1) {
-            selected.push(normalErler[0], dedeErler[0]);
-          }
-          // Option 5: Kıdemli Er + Dede
-          else if (kıdemliErler.length >= 1 && dedeErler.length >= 1) {
-            selected.push(kıdemliErler[0], dedeErler[0]);
-          }
-          // Option 6: Any 2 eligible
-          else {
-            const uygun = eligible.filter(p => !selected.includes(p)).slice(0, 2);
-            selected.push(...uygun);
-          }
-          
-          for (const person of selected) {
-            newDuties.push(createDutyAssignment(person.id, location, shift, dateStr));
-          }
-        }
-        else {
-          // Gece 1 / Gece 2: TWO people, prioritize Normal Er
-          const normalErler = eligible.filter(p => p.mainRole === 'Er' && p.seniority === 'Normal');
-          const prioritized = [...normalErler, ...eligible.filter(p => !normalErler.includes(p))];
-          const selected = prioritized.slice(0, count);
-          
-          for (const person of selected) {
-            newDuties.push(createDutyAssignment(person.id, location, shift, dateStr));
-          }
+        
+        // Add assignments for this location
+        for (const person of assignedForLocation) {
+          newDuties.push(createDutyAssignment(person.id, ln.location, shift, dateStr));
         }
       }
     }
