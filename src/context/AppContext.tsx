@@ -391,6 +391,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     
+    // Shift time definitions for 8-hour gap calculation
+    const shiftTimes: Record<ShiftType, { start: number; end: number }> = {
+      'Gündüz 1': { start: 6, end: 12 },
+      'Gündüz 2': { start: 12, end: 18 },
+      'Akşam 1': { start: 18, end: 22 },
+      'Gece 1': { start: 22, end: 2 },
+      'Gece 2': { start: 2, end: 6 }
+    };
+
     // Get available personnel for this date
     const availablePersonnel = state.personnel.filter(p => {
       if (!p.isActive) return false;
@@ -406,7 +415,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       if (onLeave) return false;
       
-      // NEW RULE: Normal personnel can have 2 duties, seniors 1
+      // Existing duties count
       const existingDuties = state.duties.filter(d => 
         d.personnelId === p.id && new Date(d.date).toISOString().split('T')[0] === dateStr
       );
@@ -418,8 +427,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return existingDuties.length < maxDuties;
     });
 
-    // Sort by seniority priority
-    availablePersonnel.sort((a, b) => {
+    // Sort by seniority priority (Dede → Kıdemli → Normal)
+    const sortedPersonnel = [...availablePersonnel].sort((a, b) => {
       const priority = state.settings.priorityOrder;
       return priority.indexOf(a.seniority) - priority.indexOf(b.seniority);
     });
@@ -430,11 +439,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     // Personnel count per location and shift
     const getPersonnelCount = (location: string, shift: string): number => {
-      // Çapraz: Always 1 person for all shifts
       if (location === 'Çapraz') return 1;
-      // Kaya1/Kaya2: Gündüz = 1 person, Akşam/Gece = 2 people
       if (shift === 'Gündüz 1' || shift === 'Gündüz 2') return 1;
-      return 2; // Akşam 1, Gece 1, Gece 2
+      return 2;
+    };
+
+    // Helper to check 8-hour gap between shifts
+    const has8HourGap = (personnelId: string, newShift: ShiftType): boolean => {
+      const personDuties = newDuties.filter(d => d.personnelId === personnelId);
+      if (personDuties.length === 0) return true;
+      
+      const newStart = shiftTimes[newShift].start;
+      const newEnd = shiftTimes[newShift].end;
+      
+      for (const duty of personDuties) {
+        if (!duty.shift) continue;
+        const existingStart = shiftTimes[duty.shift].start;
+        const existingEnd = shiftTimes[duty.shift].end;
+        
+        // Calculate gap
+        let gap: number;
+        if (existingEnd > newStart) {
+          gap = (24 - existingEnd) + newStart;
+        } else {
+          gap = newStart - existingEnd;
+        }
+        
+        if (gap < 8) return false;
+      }
+      return true;
     };
 
     const newDuties: DutyAssignment[] = [];
@@ -446,16 +479,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
           .filter(d => d.location === location && d.shift === shift && new Date(d.date).toISOString().split('T')[0] === dateStr)
           .map(d => d.personnelId);
 
-        // Find available personnel for this shift
-        const eligible = availablePersonnel.filter(p => {
-          // Check if already assigned
+        // Find available personnel for this shift (from full pool, respecting all rules)
+        const eligible = sortedPersonnel.filter(p => {
+          // Check if already assigned to this location+shift
           if (assignedIds.includes(p.id)) return false;
+          // Check max duties per person
+          const personDuties = newDuties.filter(d => d.personnelId === p.id);
+          const maxDuties = p.seniority === 'Normal' ? 2 : 1;
+          if (personDuties.length >= maxDuties) return false;
           // Check subrole exclusion
           if (p.subRole && state.settings.excludeSubRoles.includes(p.subRole)) return false;
-          // Check Dede night shift restriction
+          // Check Dede night restriction
           if (p.seniority === 'Dede' && (shift === 'Gece 1' || shift === 'Gece 2')) return false;
           // Check exemptions
           if (hasExemption(p.id, location, shift)) return false;
+          // Check 8-hour gap rule
+          if (!has8HourGap(p.id, shift)) return false;
           return true;
         });
 
@@ -508,9 +547,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             }
           }
         } else {
-          // Normal assignment
-          for (let i = 0; i < count && eligible.length > 0; i++) {
-            const person = eligible.shift()!;
+          // Normal assignment - use first N eligible personnel
+          const selected = eligible.slice(0, count);
+          for (const person of selected) {
             newDuties.push({
               id: uuidv4(),
               personnelId: person.id,
