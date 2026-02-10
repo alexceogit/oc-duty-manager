@@ -55,8 +55,8 @@ CREATE TABLE IF NOT EXISTS leaves (
 CREATE TABLE IF NOT EXISTS duty_assignments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   personnel_id UUID REFERENCES personnel(id) ON DELETE CASCADE NOT NULL,
-  location TEXT NOT NULL CHECK (location IN ('Çapraz', 'Kaya1', 'Kaya2', 'Nizamiye', 'Santral')),
-  shift TEXT CHECK (shift IN ('Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2')),
+  location TEXT NOT NULL CHECK (location IN ('Çapraz', 'Kaya1', 'Kaya2', 'Nizamiye', 'Santral', '24cü')),
+  shift TEXT CHECK (shift IN ('Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2', 'Santral Gündüz', 'Santral Gece')),
   date DATE NOT NULL,
   is_manual BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

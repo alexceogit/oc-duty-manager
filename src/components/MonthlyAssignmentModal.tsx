@@ -97,45 +97,66 @@ export default function MonthlyAssignmentModal({
       deleteDuty(existingAssignments.santralGece.id);
     }
 
-    // Add new assignments
+    // Add new assignments with error handling
+    const errors: string[] = [];
+
     if (nizamiyePersonnel) {
-      addDuty({
-        personnelId: nizamiyePersonnel,
-        location: 'Nizamiye',
-        date: new Date(dateStr),
-        isManual: true
-      });
+      try {
+        await addDuty({
+          personnelId: nizamiyePersonnel,
+          location: 'Nizamiye',
+          date: new Date(dateStr),
+          isManual: true
+        });
+      } catch (e: any) {
+        errors.push(`Nizamiye: ${e.message}`);
+      }
     }
 
     if (yirmiDortcuPersonnel) {
-      addDuty({
-        personnelId: yirmiDortcuPersonnel,
-        location: '24cü',
-        date: new Date(dateStr),
-        isManual: true
-      });
+      try {
+        await addDuty({
+          personnelId: yirmiDortcuPersonnel,
+          location: '24cü',
+          date: new Date(dateStr),
+          isManual: true
+        });
+      } catch (e: any) {
+        errors.push(`24.cü: ${e.message}`);
+      }
     }
 
     if (santralGündüzPersonnel) {
-      addDuty({
-        personnelId: santralGündüzPersonnel,
-        location: 'Santral',
-        shift: 'Santral Gündüz',
-        date: new Date(dateStr),
-        isManual: true
-      });
+      try {
+        await addDuty({
+          personnelId: santralGündüzPersonnel,
+          location: 'Santral',
+          shift: 'Santral Gündüz',
+          date: new Date(dateStr),
+          isManual: true
+        });
+      } catch (e: any) {
+        errors.push(`Santral Gündüz: ${e.message}`);
+      }
     }
 
     if (santralGecePersonnel) {
-      addDuty({
-        personnelId: santralGecePersonnel,
-        location: 'Santral',
-        shift: 'Santral Gece',
-        date: new Date(dateStr),
-        isManual: true
-      });
+      try {
+        await addDuty({
+          personnelId: santralGecePersonnel,
+          location: 'Santral',
+          shift: 'Santral Gece',
+          date: new Date(dateStr),
+          isManual: true
+        });
+      } catch (e: any) {
+        errors.push(`Santral Gece: ${e.message}`);
+      }
     }
 
+    if (errors.length > 0) {
+      alert('Hata oluştu:\n' + errors.join('\n'));
+    }
     onClose();
   };
 

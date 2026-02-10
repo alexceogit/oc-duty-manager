@@ -369,24 +369,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_CURRENT_DATE', payload: date });
   }
 
-  // Check if personnel has exemption for location or shift
-  function hasExemption(personnelId: string, location?: string, shift?: string): boolean {
-    return state.exemptions.some(e => {
-      if (e.personnelId !== personnelId || !e.isActive) return false;
-      
-      if (e.exemptionType === 'shift' && shift && e.targetValue === shift) return true;
-      if (e.exemptionType === 'location' && location && e.targetValue === location) return true;
-      
-      // Combined check: shift_location
-      if (e.exemptionType === 'shift_location' && shift && location) {
-        const [exemptShift, exemptLocation] = (e.targetValue as string).split('|');
-        return exemptShift === shift && exemptLocation === location;
-      }
-      
-      return false;
-    });
-  }
-
   // Auto-schedule algorithm with location rotation and flexible Akşam 1 rules
   async function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
@@ -447,47 +429,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return 2; // Akşam 1, Gece 1, Gece 2
     };
 
-    // Helper to check 8-hour gap between shifts
-    const has8HourGap = (personnelId: string, newShift: string): boolean => {
-      const personDuties = newDuties.filter(d => d.personnelId === personnelId);
-      if (personDuties.length === 0) return true;
-      
-      const newStart = shiftTimes[newShift].start;
-      
-      for (const duty of personDuties) {
-        if (!duty.shift) continue;
-        const existingEnd = shiftTimes[duty.shift].end;
-        
-        let gap: number;
-        if (existingEnd > newStart) {
-          gap = (24 - existingEnd) + newStart;
-        } else {
-          gap = newStart - existingEnd;
-        }
-        
-        if (gap < 8) return false;
-      }
-      return true;
-    };
-
-    // Helper to check if person is already assigned at the same time (any location)
-    const isPersonAssignedAtTime = (personnelId: string, shift: string): boolean => {
-      // Define overlapping shifts (same time period)
-      const shiftGroups: Record<string, string[]> = {
-        'Gündüz 1': ['Gündüz 1'],
-        'Gündüz 2': ['Gündüz 2'],
-        'Akşam 1': ['Akşam 1'],
-        'Gece 1': ['Gece 1'],
-        'Gece 2': ['Gece 2']
-      };
-      
-      const overlappingShifts = shiftGroups[shift] || [shift];
-      return newDuties.some(d => 
-        d.personnelId === personnelId && 
-        overlappingShifts.includes(d.shift || '')
-      );
-    };
-
     const newDuties: DutyAssignment[] = [];
 
     // Helper to get all currently assigned personnel IDs for this shift (any location)
@@ -510,9 +451,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         location,
         needed: getPersonnelCount(location, shift)
       }));
-
-      // Calculate total needed
-      const totalNeeded = locationNeeds.reduce((sum, ln) => sum + ln.needed, 0);
       
       // Get eligible personnel for this shift
       let eligible = sortedPersonnel.filter(p => {
