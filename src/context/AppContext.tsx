@@ -679,33 +679,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
       new Date(d.date).toISOString().split('T')[0] === dateStr && !d.isManual
     );
     
-    console.log('=== clearAutoSchedule START ===');
-    console.log('Date:', dateStr);
-    console.log('Current duties count:', currentDuties.length);
-    console.log('Auto duties to delete:', autoDuties.length);
+    alert(`🧹 Temizlik başladı\n📅 Tarih: ${dateStr}\n👥 Silinecek nöbet: ${autoDuties.length}`);
     
     // Dispatch loading state
     dispatch({ type: 'SET_LOADING', payload: true });
     
+    let successCount = 0;
+    let errorCount = 0;
+    
     try {
       // Delete each duty from Supabase first
       for (const duty of autoDuties) {
-        console.log(`Deleting from DB: ${duty.id} - ${duty.location} ${duty.shift}`);
         const { error } = await supabaseHelpers.deleteDuty(duty.id);
         if (error) {
-          console.error(`DB delete error for ${duty.id}:`, error);
+          console.error(`Delete error:`, error);
+          errorCount++;
         } else {
-          console.log(`DB delete success: ${duty.id}`);
+          successCount++;
         }
       }
       
       // Clear all auto-duties from local state
-      console.log('Dispatching SET_DUTIES_FOR_DATE');
       dispatch({ type: 'SET_DUTIES_FOR_DATE', payload: { date: dateStr, duties: [] } });
       
-      console.log('=== clearAutoSchedule END ===');
+      alert(`✅ Temizlik tamamlandı!\n\n📊 Başarılı: ${successCount}\n❌ Hata: ${errorCount}`);
+      
     } catch (err) {
-      console.error('Error clearing auto-schedule:', err);
+      console.error('Error:', err);
+      alert(`❌ Hata oluştu: ${err}`);
+    } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
   }
