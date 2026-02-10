@@ -517,6 +517,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       for (const ln of locationNeeds) {
         const needed = ln.needed;
         const assignedForLocation: Personnel[] = [];
+        let assignedCount = 0;
         
         for (let i = 0; i < needed && personIndex < eligible.length; i++) {
           // Find next eligible person who can work at this location
@@ -570,6 +571,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             if (!hasExemp) {
               assignedForLocation.push(person);
               personIndex++;
+              assignedCount++;
               break;
             }
             personIndex++;
@@ -580,6 +582,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
         for (const person of assignedForLocation) {
           newDuties.push(createDutyAssignment(person.id, ln.location, shift, dateStr));
         }
+        
+        // DEVRIYE FALLBACK: If still need personnel, assign Devriye
+        // Priority order: Gece 2 → Gece 1 → Akşam 1 (later shifts get Devriye first)
+        if (assignedCount < needed) {
+          const devriyePriority = ['Gece 2', 'Gece 1', 'Akşam 1'];
+          const devriyeOrderIndex = devriyePriority.indexOf(shift);
+          
+          // Only assign Devriye for night/evening shifts (not Gündüz)
+          if (devriyeOrderIndex >= 0) {
+            const currentDevriyeCount = newDuties.filter(d => 
+              d.isDevriye && d.location === ln.location && d.shift === shift
+            ).length;
+            
+            if (currentDevriyeCount < (needed - assignedCount)) {
+              console.log(`Assigning DEVRİYE for ${ln.location} ${shift} (insufficient personnel)`);
+              newDuties.push({
+                id: uuidv4(),
+                personnelId: 'devriye-placeholder',
+                location: ln.location,
+                shift,
+                date: new Date(dateStr),
+                isManual: false,
+                isDevriye: true,
+                createdAt: new Date(),
+                updatedAt: new Date()
+              });
+            }
+          }
+        }
       }
     }
 
@@ -588,19 +619,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
     for (const duty of newDuties) {
       console.log('Saving duty:', duty);
       dispatch({ type: 'ADD_DUTY', payload: duty });
-      const { error } = await supabaseHelpers.addDuty({
-        personnel_id: duty.personnelId,
-        location: duty.location,
-        shift: duty.shift,
-        date: new Date(duty.date).toISOString().split('T')[0],
-        is_manual: duty.isManual,
-        created_at: duty.createdAt.toISOString(),
-        updated_at: duty.updatedAt.toISOString()
-      });
-      if (error) {
-        console.error('Auto-schedule add duty error:', error);
+      
+      if (duty.isDevriye) {
+        // Devriye assignment - personnel_id is NULL
+        const { error } = await supabaseHelpers.addDuty({
+          personnel_id: null,
+          location: duty.location,
+          shift: duty.shift,
+          date: new Date(duty.date).toISOString().split('T')[0],
+          is_manual: duty.isManual,
+          is_devriye: true
+        });
+        if (error) {
+          console.error('Auto-schedule add devriye error:', error);
+        }
       } else {
-        console.log('Duty saved successfully:', duty.id);
+        // Normal personnel assignment
+        const { error } = await supabaseHelpers.addDuty({
+          personnel_id: duty.personnelId,
+          location: duty.location,
+          shift: duty.shift,
+          date: new Date(duty.date).toISOString().split('T')[0],
+          is_manual: duty.isManual,
+          is_devriye: false
+        });
+        if (error) {
+          console.error('Auto-schedule add duty error:', error);
+        } else {
+          console.log('Duty saved successfully:', duty.id);
+        }
       }
     }
   }

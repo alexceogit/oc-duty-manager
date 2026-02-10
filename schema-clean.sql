@@ -54,12 +54,13 @@ CREATE TABLE IF NOT EXISTS leaves (
 -- ============================================
 CREATE TABLE IF NOT EXISTS duty_assignments (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  personnel_id UUID REFERENCES personnel(id) ON DELETE CASCADE NOT NULL,
+  personnel_id UUID REFERENCES personnel(id) ON DELETE CASCADE,
   location TEXT NOT NULL CHECK (location IN ('Çapraz', 'Kaya1', 'Kaya2', 'Nizamiye', 'Santral', '24cü')),
   shift TEXT CHECK (shift IN ('Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2', 'Santral Gündüz', 'Santral Gece')),
   date DATE NOT NULL,
   is_manual BOOLEAN DEFAULT false,
   is_devriye BOOLEAN DEFAULT false,
+  CHECK (personnel_id IS NOT NULL OR is_devriye = true),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

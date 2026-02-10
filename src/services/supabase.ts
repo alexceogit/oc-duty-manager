@@ -174,7 +174,18 @@ export const supabaseHelpers = {
 
   async addDuty(duty: any) {
     if (!supabase) return { error: 'Supabase not configured' };
-    const { error } = await supabase.from('duty_assignments').insert(duty);
+    
+    // For devriye assignments, we need special handling
+    const dutyData = {
+      personnel_id: duty.isDevriye ? null : duty.personnelId,
+      location: duty.location,
+      shift: duty.shift,
+      date: duty.date instanceof Date ? duty.date.toISOString().split('T')[0] : duty.date,
+      is_manual: duty.isManual,
+      is_devriye: duty.isDevriye || false
+    };
+    
+    const { error } = await supabase.from('duty_assignments').insert(dutyData);
     return { error };
   },
 
