@@ -122,9 +122,9 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
           });
         }
       } else {
-        // Normal personnel assignment
+        // Normal personnel assignment - personnelId must be a valid string
         await addDuty({
-          personnelId: selectedPersonnelId || null,  // Send null if empty
+          personnelId: selectedPersonnelId!,  // We validated it's not null/empty
           location,
           shift,
           date: new Date(dateStr),
