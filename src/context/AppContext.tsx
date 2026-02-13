@@ -345,7 +345,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     // Manual duties go to pendingDuties (need save confirmation)
     // Auto-generated duties also go to pendingDuties
-    dispatch({ type: 'SET_PENDING_DUTIES', payload: [...state.pendingDuties, newDuty] });
+    // Use stateRef to avoid stale closure issues
+    dispatch({ type: 'SET_PENDING_DUTIES', payload: [...stateRef.current.pendingDuties, newDuty] });
   }
 
   async function updateDuty(id: string, updates: Partial<DutyAssignment>) {
@@ -768,15 +769,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     
+    console.log('DEBUG savePendingDuties: pending count =', pending.length);
+    
     dispatch({ type: 'SET_LOADING', payload: true });
     
     try {
-      for (const duty of pending) {
+      for (let i = 0; i < pending.length; i++) {
+        const duty = pending[i];
+        console.log(`DEBUG savePendingDuties[${i}]:`, {
+          personnelId: duty.personnelId,
+          isDevriye: duty.isDevriye,
+          location: duty.location,
+          shift: duty.shift
+        });
+        
         const isDevriye = duty.isDevriye === true;
+        const personnelId = duty.personnelId;
+        
+        console.log(`DEBUG: isDevriye=${isDevriye}, personnelId=${personnelId}`);
+        
+        // Validation: if not devriye, personnel_id must not be null
+        if (!isDevriye && (!personnelId || personnelId === '')) {
+          console.error('ERROR: personnelId is missing for non-devriye duty!');
+          continue; // Skip this duty
+        }
         
         // Save to Supabase
         const { error } = await supabaseHelpers.addDuty({
-          personnel_id: isDevriye ? null : duty.personnelId,
+          personnel_id: isDevriye ? null : personnelId,
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
@@ -786,6 +806,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         if (error) {
           console.error('Save pending duty error:', error);
+        } else {
+          console.log(`OK: Duty ${i} saved successfully`);
         }
       }
       

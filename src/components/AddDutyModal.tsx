@@ -104,8 +104,9 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
       const needsTwoPeople = (location !== 'Çapraz') && (isNight || isAkşam);
       const devriyeCount = needsTwoPeople ? 2 : 1;
 
-      // Validate
-      if (!isDevriye && !selectedPersonnelId) {
+      // Validate - check for empty string too
+      const hasValidPersonnel = selectedPersonnelId && selectedPersonnelId.trim() !== '';
+      if (!isDevriye && !hasValidPersonnel) {
         setError('Lütfen bir personel seçin');
         return;
       }
@@ -125,8 +126,9 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
         }
       } else {
         // Normal personnel assignment - personnelId must be a valid string
+        console.log('DEBUG AddDutyModal: selectedPersonnelId =', selectedPersonnelId);
         await addDuty({
-          personnelId: selectedPersonnelId!,  // We validated it's not null/empty
+          personnelId: selectedPersonnelId!,
           location,
           shift,
           date: new Date(dateStr),
