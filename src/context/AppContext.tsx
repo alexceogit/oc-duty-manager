@@ -22,12 +22,14 @@ interface AppState {
   personnel: Personnel[];
   leaves: Leave[];
   duties: DutyAssignment[];
+  pendingDuties: DutyAssignment[]; // Generated but not yet saved
   exemptions: PersonnelExemption[];
   settings: AlgorithmSettings;
   currentDate: Date;
   isLoading: boolean;
   error: string | null;
   supabaseConnected: boolean;
+  hasUnsavedChanges: boolean; // Track if there are pending changes
 }
 
 // Action types
@@ -51,6 +53,9 @@ type Action =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'SET_SUPABASE_STATUS'; payload: boolean }
+  | { type: 'SET_PENDING_DUTIES'; payload: DutyAssignment[] }
+  | { type: 'CLEAR_PENDING_DUTIES' }
+  | { type: 'SET_UNSAVED_CHANGES'; payload: boolean }
   | { type: 'RESET_STATE' };
 
 // Initial state - Empty arrays, no mock data
@@ -58,12 +63,14 @@ const initialState: AppState = {
   personnel: [],
   leaves: [],
   duties: [],
+  pendingDuties: [],
   exemptions: [],
   settings: defaultSettings,
   currentDate: new Date(),
   isLoading: false,
   error: null,
-  supabaseConnected: false
+  supabaseConnected: false,
+  hasUnsavedChanges: false
 };
 
 // Reducer
@@ -137,6 +144,12 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...state, error: action.payload };
     case 'SET_SUPABASE_STATUS':
       return { ...state, supabaseConnected: action.payload };
+    case 'SET_PENDING_DUTIES':
+      return { ...state, pendingDuties: action.payload, hasUnsavedChanges: true };
+    case 'CLEAR_PENDING_DUTIES':
+      return { ...state, pendingDuties: [], hasUnsavedChanges: false };
+    case 'SET_UNSAVED_CHANGES':
+      return { ...state, hasUnsavedChanges: action.payload };
     case 'RESET_STATE':
       return initialState;
     default:
@@ -161,8 +174,10 @@ interface AppContextType {
   updateExemption: (id: string, updates: Partial<PersonnelExemption>) => void;
   deleteExemption: (id: string) => void;
   // Algorithm
-  runAutoSchedule: (date: Date) => void;
+  runAutoSchedule: (date: Date) => Promise<DutyAssignment[]>;
   clearAutoSchedule: (date: Date) => void;
+  savePendingDuties: () => Promise<void>;
+  discardPendingDuties: () => void;
   // Date navigation
   setCurrentDate: (date: Date) => void;
   // Data refresh
@@ -374,7 +389,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_CURRENT_DATE', payload: date });
   }
 
-  // Auto-schedule algorithm with location rotation and flexible Akşam 1 rules
+  // Auto-schedule algorithm with GÜNDÜZ FILL rule (fill empty day shifts with night personnel)
   async function runAutoSchedule(date: Date) {
     const dateStr = date.toISOString().split('T')[0];
     
@@ -443,7 +458,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .map(d => d.personnelId);
     };
 
-    // Sort shifts by time order: Akşam → Gece → Gündöz (starting from 18:00)
+    // Sort shifts by time order: Akşam → Gece → Gündüz (starting from 18:00)
     const shiftOrder: ShiftType[] = ['Akşam 1', 'Gece 1', 'Gece 2', 'Gündüz 1', 'Gündüz 2'];
 
     // Process each shift SEQUENTIALLY
@@ -612,38 +627,72 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // Save all new duties to database
-    for (const duty of newDuties) {
-      dispatch({ type: 'ADD_DUTY', payload: duty });
-      
-      if (duty.isDevriye) {
-        // Devriye assignment - personnel_id is NULL
-        const { error } = await supabaseHelpers.addDuty({
-          personnel_id: null,
-          location: duty.location,
-          shift: duty.shift,
-          date: new Date(duty.date).toISOString().split('T')[0],
-          is_manual: false,  // Always false for auto-schedule
-          is_devriye: true
-        });
-        if (error) {
-          console.error('Auto-schedule add devriye error:', error);
-        }
-      } else {
-        // Normal personnel assignment - force is_manual to false for auto-schedule
-        const { error } = await supabaseHelpers.addDuty({
-          personnel_id: duty.personnelId,
-          location: duty.location,
-          shift: duty.shift,
-          date: new Date(duty.date).toISOString().split('T')[0],
-          is_manual: false,  // Always false for auto-schedule
-          is_devriye: false
-        });
-        if (error) {
-          console.error('Auto-schedule add duty error:', error);
+    // ========================================
+    // GÜNDÜZ DOLDURMA KURALI - Fill empty day shifts
+    // ========================================
+    // If Gündüz 2 (12:00-18:00) is still empty for any location, 
+    // pull personnel from night shifts (they become "boş geçmiş")
+    const dayShifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2'];
+    
+    for (const shift of dayShifts) {
+      for (const location of locations) {
+        const needed = getPersonnelCount(location, shift);
+        const existingDuties = newDuties.filter(d => 
+          d.location === location && 
+          d.shift === shift &&
+          new Date(d.date).toISOString().split('T')[0] === dateStr
+        );
+        
+        let currentCount = existingDuties.length;
+        
+        if (currentCount < needed) {
+          // Need to fill: Get all personnel who worked night shifts (Akşam 1, Gece 1, Gece 2)
+          const nightShifts: ShiftType[] = ['Akşam 1', 'Gece 1', 'Gece 2'];
+          
+          for (const nightShift of nightShifts) {
+            const nightDuties = newDuties.filter(d => 
+              d.shift === nightShift &&
+              new Date(d.date).toISOString().split('T')[0] === dateStr &&
+              !d.isDevriye // Skip devriye placeholders
+            );
+            
+            for (const duty of nightDuties) {
+              if (currentCount >= needed) break;
+              
+              // Check if this person is already assigned to this day shift
+              const alreadyAssigned = existingDuties.some(d => d.personnelId === duty.personnelId);
+              if (alreadyAssigned) continue;
+              
+              // Check if person already has 2 duties
+              const personTotalDuties = newDuties.filter(d => d.personnelId === duty.personnelId).length;
+              const maxDuties = sortedPersonnel.find(p => p.id === duty.personnelId)?.seniority === 'Normal' ? 2 : 1;
+              
+              if (personTotalDuties >= maxDuties) continue;
+              
+              // Check exemption for this location
+              const hasExemp = state.exemptions.some(e => 
+                e.personnelId === duty.personnelId && e.isActive && 
+                ((e.exemptionType === 'location' && e.targetValue === location) ||
+                 (e.exemptionType === 'shift_location' && e.targetValue.includes(shift) && e.targetValue.includes(location)))
+              );
+              
+              if (hasExemp) continue;
+              
+              // Assign this person to fill the gap
+              newDuties.push(createDutyAssignment(duty.personnelId, location, shift, dateStr));
+              existingDuties.push(newDuties[newDuties.length - 1]);
+              currentCount++;
+              
+              if (currentCount >= needed) break;
+            }
+          }
         }
       }
     }
+
+    // Return the generated duties (don't save yet - let user confirm)
+    // This will be stored in a temporary state for review
+    return newDuties;
   }
 
   // Helper function to create duty assignment
@@ -692,12 +741,55 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Clear all duties for this date from local state
       dispatch({ type: 'SET_DUTIES_FOR_DATE', payload: { date: dateStr, duties: [] } });
+      // Also clear pending duties
+      dispatch({ type: 'CLEAR_PENDING_DUTIES' });
       
     } catch (err) {
       console.error('Error:', err);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });
     }
+  }
+
+  // Save pending duties to database
+  async function savePendingDuties() {
+    const pending = stateRef.current.pendingDuties;
+    if (pending.length === 0) return;
+    
+    dispatch({ type: 'SET_LOADING', payload: true });
+    
+    try {
+      for (const duty of pending) {
+        // Add to local state
+        dispatch({ type: 'ADD_DUTY', payload: duty });
+        
+        // Save to Supabase
+        const { error } = await supabaseHelpers.addDuty({
+          personnel_id: duty.personnelId,
+          location: duty.location,
+          shift: duty.shift,
+          date: new Date(duty.date).toISOString().split('T')[0],
+          is_manual: duty.isManual
+        });
+        
+        if (error) {
+          console.error('Save pending duty error:', error);
+        }
+      }
+      
+      // Clear pending duties
+      dispatch({ type: 'CLEAR_PENDING_DUTIES' });
+      
+    } catch (err) {
+      console.error('Error saving pending duties:', err);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  }
+
+  // Discard pending duties
+  function discardPendingDuties() {
+    dispatch({ type: 'CLEAR_PENDING_DUTIES' });
   }
 
   // Refresh all data from Supabase
@@ -759,6 +851,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteExemption,
     runAutoSchedule,
     clearAutoSchedule,
+    savePendingDuties,
+    discardPendingDuties,
     setCurrentDate,
     refreshData
   };

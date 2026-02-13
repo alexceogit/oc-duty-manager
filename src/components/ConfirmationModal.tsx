@@ -1,5 +1,3 @@
-import React from 'react';
-
 interface ConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -101,3 +99,5 @@ export function ConfirmationModal({
     </div>
   );
 }
+
+export default ConfirmationModal;

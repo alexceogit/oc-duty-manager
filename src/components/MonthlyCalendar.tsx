@@ -247,28 +247,28 @@ export default function MonthlyCalendar() {
                 )}
                 
                 {/* Show partial assignments or empty */}
-                {!assignment.nizamiye && !assignment.yirmiDortcu && !assignment.santralGündüz && !assignment.santralGece && (
+                {assignment && !assignment.nizamiye && !assignment.yirmiDortcu && !assignment.santralGündüz && !assignment.santralGece && (
                   <div className="text-xs text-gray-400 dark:text-gray-500">
                     Atama yok
                   </div>
                 )}
                 
                 {/* Has some assignments but Nizamiye is missing */}
-                {assignment && !assignment.nizamiye && (
+                {assignment?.nizamiye === undefined && (assignment?.yirmiDortcu || assignment?.santralGündüz || assignment?.santralGece) && (
                   <div className="text-xs text-amber-600 dark:text-amber-400">
                     ⚠️ Nizamiye eksik
                   </div>
                 )}
                 
                 {/* 24cü missing */}
-                {assignment && !assignment.yirmiDortcu && (
+                {assignment?.yirmiDortcu === undefined && (assignment?.nizamiye || assignment?.santralGündüz || assignment?.santralGece) && (
                   <div className="text-xs text-amber-600 dark:text-amber-400">
                     ⚠️ 24cü eksik
                   </div>
                 )}
                 
                 {/* Santral missing */}
-                {assignment && (!assignment.santralGündüz || !assignment.santralGece) && (
+                {assignment && (!assignment.santralGündüz || !assignment.santralGece) && (assignment?.nizamiye || assignment?.yirmiDortcu) && (
                   <div className="text-xs text-amber-600 dark:text-amber-400">
                     ⚠️ Santral eksik
                   </div>

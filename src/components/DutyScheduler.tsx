@@ -35,15 +35,22 @@ export default function DutyScheduler() {
 
   const dateStr = state.currentDate.toISOString().split('T')[0];
 
-  // Get duties for current date
-  const todayDuties = state.duties.filter(d => 
+  // Get both saved duties and pending duties
+  const savedDuties = state.duties.filter(d => 
     new Date(d.date).toISOString().split('T')[0] === dateStr
   );
+  
+  const pendingDuties = state.pendingDuties.filter(d => 
+    new Date(d.date).toISOString().split('T')[0] === dateStr
+  );
+  
+  // Combine saved and pending duties for display
+  const allDuties = [...savedDuties, ...pendingDuties];
 
   // Filter by location if selected
   const filteredDuties = selectedLocation === 'Hepsi'
-    ? todayDuties
-    : todayDuties.filter(d => d.location === selectedLocation);
+    ? allDuties
+    : allDuties.filter(d => d.location === selectedLocation);
 
   // Group duties by location and shift
   const dutiesBySlot = filteredDuties.reduce((acc, duty) => {
@@ -51,11 +58,14 @@ export default function DutyScheduler() {
     if (!acc[key]) acc[key] = [];
     acc[key].push(duty);
     return acc;
-  }, {} as Record<string, typeof todayDuties>);
+  }, {} as Record<string, typeof filteredDuties>);
 
-  // Get available personnel for this date
+  // Get available personnel for this date (excluding those in pending duties)
+  const assignedPersonnelIds = new Set(pendingDuties.map(d => d.personnelId).filter(id => id !== 'devriye-placeholder'));
+  
   const availablePersonnel = state.personnel.filter(p => {
     if (!p.isActive) return false;
+    if (assignedPersonnelIds.has(p.id)) return false;
     
     // Check if on leave
     const onLeave = state.leaves.some(l => {
@@ -68,16 +78,16 @@ export default function DutyScheduler() {
     
     if (onLeave) return false;
 
-    // NEW RULE: Normal personnel can have max 2 duties per day
-    const existingDuties = todayDuties.filter(d => d.personnelId === p.id);
+    // Count saved duties only (pending doesn't count against limit)
+    const existingDuties = savedDuties.filter(d => d.personnelId === p.id);
     const maxDuties = p.seniority === 'Normal' ? 2 : 1;
     
     return existingDuties.length < maxDuties;
   });
 
-  // Check if personnel is already assigned to a slot
+  // Check if personnel is already assigned to a slot (check both saved and pending)
   const isAssigned = (personnelId: string, location: DutyLocation, shift?: ShiftType) => {
-    return todayDuties.some(d => 
+    return allDuties.some(d => 
       d.personnelId === personnelId && 
       d.location === location &&
       (!shift || d.shift === shift)
@@ -119,7 +129,7 @@ export default function DutyScheduler() {
     return 'day';
   };
 
-  if (todayDuties.length === 0) {
+  if (allDuties.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-4">🗓️</div>
@@ -135,6 +145,15 @@ export default function DutyScheduler() {
 
   return (
     <div className="space-y-6">
+      {/* Pending indicator */}
+      {pendingDuties.length > 0 && (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <p className="text-blue-700 dark:text-blue-300 text-sm">
+            📝 <strong>{pendingDuties.length} nöbet</strong> oluşturuldu. Kaydetmek için sayfanın üstündeki "Kaydet" butonuna tıklayın.
+          </p>
+        </div>
+      )}
+
       {/* Location Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
         <button
@@ -327,7 +346,8 @@ export default function DutyScheduler() {
         </p>
         <div className="flex flex-wrap gap-2">
           {availablePersonnel.map(person => {
-            const existingDuties = todayDuties.filter(d => d.personnelId === person.id);
+            const existingDuties = savedDuties.filter(d => d.personnelId === person.id);
+            const isInPending = pendingDuties.some(d => d.personnelId === person.id && d.personnelId !== 'devriye-placeholder');
             
             return (
               <div
@@ -336,7 +356,7 @@ export default function DutyScheduler() {
                 onDragStart={() => setDraggedPersonnel(person.id)}
                 onDragEnd={() => setDraggedPersonnel(null)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg cursor-move ${
-                  existingDuties.length >= 2
+                  existingDuties.length >= 2 || isInPending
                     ? 'bg-gray-100 dark:bg-gray-700 opacity-50'
                     : 'bg-white dark:bg-slate-700 border border-gray-200 dark:border-gray-600 hover:shadow-md'
                 }`}
@@ -353,7 +373,7 @@ export default function DutyScheduler() {
                     {person.firstName} {person.lastName}
                   </p>
                   <p className="text-xs text-gray-500">
-                    {existingDuties.length}/2 nöbet
+                    {existingDuties.length}/2 nöbet {isInPending && '(+1 bekleyen)'}
                   </p>
                 </div>
               </div>

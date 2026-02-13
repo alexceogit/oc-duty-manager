@@ -22,12 +22,13 @@ type Tab = 'personnel' | 'leaves' | 'duties' | 'monthly' | 'settings';
 
 // Main App Content (protected)
 function DutyManager() {
-  const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule, refreshData } = useApp();
+  const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule, savePendingDuties, discardPendingDuties, refreshData } = useApp();
   const { signOut, state: authState } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('duties');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
   const [showAddLeave, setShowAddLeave] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   
   // Confirmation modal state
   const [showConfirmation, setShowConfirmation] = useState<{
@@ -71,14 +72,46 @@ function DutyManager() {
     setCurrentDate(newDate);
   };
 
-  const handleAutoSchedule = () => {
-    setShowConfirmation({
-      isOpen: true,
-      title: 'Otomatik Nöbet Oluştur',
-      message: `${state.currentDate.toLocaleDateString('tr-TR')} tarihi için otomatik nöbet oluşturulsun mu?`,
-      onConfirm: () => runAutoSchedule(state.currentDate),
-      variant: 'info'
-    });
+  const handleAutoSchedule = async () => {
+    // Check if there are pending changes
+    if (state.hasUnsavedChanges) {
+      setShowConfirmation({
+        isOpen: true,
+        title: '⚠️ Kaydedilmemiş Değişiklikler',
+        message: 'Kaydedilmemiş nöbetler var. Önce kaydetmek veya iptal etmek ister misiniz?',
+        onConfirm: () => {}, // This won't be used
+        variant: 'warning'
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const newDuties = await runAutoSchedule(state.currentDate);
+      if (newDuties.length > 0) {
+        // Add to pending duties so savePendingDuties() can process them
+        dispatch({ type: 'SET_PENDING_DUTIES', payload: newDuties });
+        setShowConfirmation({
+          isOpen: true,
+          title: '✅ Nöbet Oluşturuldu',
+          message: `${newDuties.length} nöbet oluşturuldu. Kaydetmek için onaylayın.`,
+          onConfirm: () => savePendingDuties(),
+          variant: 'info'
+        });
+      } else {
+        setShowConfirmation({
+          isOpen: true,
+          title: '⚠️ Nöbet Oluşturulamadı',
+          message: 'Otomatik nöbet oluşturulamadı. Personel veya izinleri kontrol edin.',
+          onConfirm: () => {},
+          variant: 'warning'
+        });
+      }
+    } catch (error) {
+      console.error('Auto-schedule error:', error);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleClearAutoSchedule = () => {
@@ -86,7 +119,10 @@ function DutyManager() {
       isOpen: true,
       title: '⚠️ Nöbetleri Sil',
       message: 'Bu işlem seçili tarihteki TÜM nöbetleri (manuel + otomatik) silecektir.\n\nEmin misiniz?',
-      onConfirm: () => clearAutoSchedule(state.currentDate),
+      onConfirm: () => {
+        clearAutoSchedule(state.currentDate);
+        discardPendingDuties();
+      },
       variant: 'danger'
     });
   };
@@ -265,26 +301,67 @@ function DutyManager() {
                     Nöbet Çizelgesi
                   </h2>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleClearAutoSchedule}
-                      className="btn-danger flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      Temizle
-                    </button>
-                    <button
-                      onClick={handleAutoSchedule}
-                      className="btn-primary flex items-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
-                      Otomatik Oluştur
-                    </button>
+                    {state.hasUnsavedChanges && (
+                      <>
+                        <button
+                          onClick={() => discardPendingDuties()}
+                          className="btn-danger flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          İptal
+                        </button>
+                        <button
+                          onClick={() => savePendingDuties()}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Kaydet
+                        </button>
+                      </>
+                    )}
+                    {!state.hasUnsavedChanges && (
+                      <>
+                        <button
+                          onClick={handleClearAutoSchedule}
+                          className="btn-danger flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                          Temizle
+                        </button>
+                        <button
+                          onClick={handleAutoSchedule}
+                          disabled={isGenerating}
+                          className="btn-primary flex items-center gap-2"
+                        >
+                          {isGenerating ? (
+                            <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          )}
+                          {isGenerating ? 'Oluşturuluyor...' : 'Otomatik Oluştur'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
+                {state.hasUnsavedChanges && (
+                  <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                    <p className="text-amber-700 dark:text-amber-300 text-sm">
+                      ⚠️ <strong>Kaydedilmemiş nöbetler var!</strong> Değişiklikleri kaydetmek için "Kaydet" butonuna tıklayın veya "İptal" ile atmayın.
+                    </p>
+                  </div>
+                )}
                 <DutyScheduler />
               </div>
             )}
