@@ -342,9 +342,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createdAt: new Date(),
       updatedAt: new Date()
     };
-    dispatch({ type: 'ADD_DUTY', payload: newDuty });
-    const { error } = await supabaseHelpers.addDuty(camelToSnake({ ...newDuty, created_at: newDuty.createdAt.toISOString(), updated_at: newDuty.updatedAt.toISOString() }));
-    if (error) console.error('Add duty error:', error);
+    
+    // Manual duties go to pendingDuties (need save confirmation)
+    // Auto-generated duties also go to pendingDuties
+    dispatch({ type: 'SET_PENDING_DUTIES', payload: [...state.pendingDuties, newDuty] });
   }
 
   async function updateDuty(id: string, updates: Partial<DutyAssignment>) {
