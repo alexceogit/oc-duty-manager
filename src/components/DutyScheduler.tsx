@@ -348,16 +348,16 @@ export default function DutyScheduler() {
         ))}
       </div>
 
-      {/* Add Duty Modal */}
-      {addModalData && (
+      {/* Add Duty Modal - opens when isAddModalOpen is true */}
+      {isAddModalOpen && (
         <AddDutyModal
           isOpen={isAddModalOpen}
           onClose={() => {
             setIsAddModalOpen(false);
             setAddModalData(null);
           }}
-          locProp={addModalData.location}
-          shiftProp={addModalData.shift}
+          locProp={addModalData?.location}
+          shiftProp={addModalData?.shift}
           date={state.currentDate}
         />
       )}
