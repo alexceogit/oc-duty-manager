@@ -5,15 +5,6 @@ import type { DutyLocation, ShiftType } from '../types';
 interface AddDutyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  location: DutyLocation;
-  shift: ShiftType;
-  date: Date;
-  existingAssignmentId?: string;
-}
-
-interface AddDutyModalProps {
-  isOpen: boolean;
-  onClose: () => void;
   locProp?: DutyLocation;
   shiftProp?: ShiftType;
   date: Date;
