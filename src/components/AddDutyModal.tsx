@@ -85,6 +85,9 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
       return;
     }
     
+    // Debug: Show selected personnel ID
+    alert(`DEBUG: selectedPersonnelId="${selectedPersonnelId}" isDevriye=${isDevriye}`);
+    
     // Check if personnel is selected (either a valid ID or devriye)
     const isPersonnelSelected = selectedPersonnelId && selectedPersonnelId.trim() !== '';
     if (!isDevriye && !isPersonnelSelected) {
