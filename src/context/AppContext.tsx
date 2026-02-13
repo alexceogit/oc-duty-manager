@@ -776,7 +776,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
-          is_manual: duty.isManual
+          is_manual: duty.isManual,
+          is_devriye: duty.isDevriye || false
         });
         
         if (error) {

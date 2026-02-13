@@ -181,7 +181,8 @@ export const supabaseHelpers = {
       location: duty.location,
       shift: duty.shift,
       date: duty.date instanceof Date ? duty.date.toISOString().split('T')[0] : duty.date,
-      is_manual: duty.isManual
+      is_manual: duty.isManual,
+      is_devriye: duty.isDevriye || false
     };
     
     const { error } = await supabase.from('duty_assignments').insert(dutyData);
