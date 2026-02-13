@@ -11,12 +11,34 @@ interface AddDutyModalProps {
   existingAssignmentId?: string;
 }
 
-export function AddDutyModal({ isOpen, onClose, location, shift, date, existingAssignmentId }: AddDutyModalProps) {
+interface AddDutyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  location?: DutyLocation;
+  shift?: ShiftType;
+  date: Date;
+  existingAssignmentId?: string;
+}
+
+const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
+const allShifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
+
+export function AddDutyModal({ isOpen, onClose, location: initialLocation, shift: initialShift, date, existingAssignmentId }: AddDutyModalProps) {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
   const [isDevriye, setIsDevriye] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Allow selection within modal if not pre-selected
+  const [selectedLocation, setSelectedLocation] = useState<DutyLocation | undefined>(initialLocation);
+  const [selectedShift, setSelectedShift] = useState<ShiftType | undefined>(initialShift);
+  const [showLocationSelector, setShowLocationSelector] = useState(!initialLocation);
+  const [showShiftSelector, setShowShiftSelector] = useState(!initialShift);
+
+  // Use selected values or fall back to props
+  const location = selectedLocation || initialLocation;
+  const shift = selectedShift || initialShift;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -24,8 +46,16 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
       setSelectedPersonnelId(null);
       setIsDevriye(false);
       setError(null);
+      if (!initialLocation) {
+        setSelectedLocation(undefined);
+        setShowLocationSelector(true);
+      }
+      if (!initialShift) {
+        setSelectedShift(undefined);
+        setShowShiftSelector(true);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialLocation, initialShift]);
 
   const dateStr = date.toISOString().split('T')[0];
 
@@ -55,6 +85,12 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
     (shift === 'Akşam 1' || shift === 'Gece 1' || shift === 'Gece 2');
 
   const handleSubmit = async () => {
+    // Validate required fields
+    if (!location || !shift) {
+      setError('Lütfen lokasyon ve vardiya seçin');
+      return;
+    }
+    
     if (!isDevriye && !selectedPersonnelId) {
       setError('Lütfen bir personel seçin');
       return;
@@ -117,6 +153,68 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
 
   if (!isOpen) return null;
 
+  // Check if we need to show selectors
+  const needsLocation = showLocationSelector || !location;
+  const needsShift = showShiftSelector || !shift;
+  
+  // Location selection UI
+  const LocationSelector = () => (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Lokasyon Seçin {!needsLocation && <span className="text-red-500">*</span>}
+      </label>
+      <div className="grid grid-cols-3 gap-2">
+        {locations.map(loc => (
+          <button
+            key={loc}
+            onClick={() => {
+              setSelectedLocation(loc);
+              setShowLocationSelector(false);
+            }}
+            className={`p-3 rounded-lg border-2 transition-colors ${
+              selectedLocation === loc
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <span className="text-lg">
+              {loc === 'Çapraz' ? '🏛️' : '🪨'}
+            </span>
+            <p className="text-sm font-medium mt-1">{loc}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
+  // Shift selection UI
+  const ShiftSelector = () => (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        Vardiya Seçin {!needsShift && <span className="text-red-500">*</span>}
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        {allShifts.map(sh => (
+          <button
+            key={sh}
+            onClick={() => {
+              setSelectedShift(sh);
+              setShowShiftSelector(false);
+            }}
+            className={`p-3 rounded-lg border-2 transition-colors ${
+              selectedShift === sh
+                ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
+            }`}
+          >
+            <p className="font-medium text-sm">{sh}</p>
+            <p className="text-xs text-gray-500">{shiftDisplay[sh]}</p>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+
   // Format shift display
   const shiftDisplay: Record<ShiftType, string> = {
     'Gündüz 1': '06:00 - 12:00',
@@ -146,22 +244,36 @@ export function AddDutyModal({ isOpen, onClose, location, shift, date, existingA
         </div>
 
         {/* Assignment Info */}
-        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-4">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="text-gray-500 dark:text-gray-400">Lokasyon:</span>
-              <p className="font-medium text-gray-900 dark:text-white">{location}</p>
-            </div>
-            <div>
-              <span className="text-gray-500 dark:text-gray-400">Vardiya:</span>
-              <p className="font-medium text-gray-900 dark:text-white">{shift} ({shiftDisplay[shift]})</p>
-            </div>
-            <div className="col-span-2">
-              <span className="text-gray-500 dark:text-gray-400">Tarih:</span>
-              <p className="font-medium text-gray-900 dark:text-white">{dateStr}</p>
+        {!needsLocation && !needsShift ? (
+          <div className="bg-gray-100 dark:bg-gray-700 rounded-lg p-3 mb-4">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Lokasyon:</span>
+                <p className="font-medium text-gray-900 dark:text-white">{location}</p>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Vardiya:</span>
+                <p className="font-medium text-gray-900 dark:text-white">{shift} ({shiftDisplay[shift]})</p>
+              </div>
+              <div className="col-span-2">
+                <span className="text-gray-500 dark:text-gray-400">Tarih:</span>
+                <p className="font-medium text-gray-900 dark:text-white">{dateStr}</p>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+            <p className="text-blue-700 dark:text-blue-400 text-sm font-medium">
+              ℹ️ Manuel nöbet eklemek için lokasyon ve vardiya seçiniz
+            </p>
+          </div>
+        )}
+
+        {/* Location Selector */}
+        {needsLocation && <LocationSelector />}
+        
+        {/* Shift Selector */}
+        {needsShift && <ShiftSelector />}
 
         {/* Devriye Toggle */}
         <div className="mb-4">

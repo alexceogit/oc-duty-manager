@@ -136,9 +136,19 @@ export default function DutyScheduler() {
         <p className="text-gray-500 dark:text-gray-400 mb-4">
           {dateStr} tarihi için henüz nöbet oluşturulmamış.
         </p>
-        <p className="text-sm text-gray-400">
+        <p className="text-sm text-gray-400 mb-6">
           Otomatik oluştur'a tıklayın veya personeli sürükleyerek ekleyin.
         </p>
+        {/* Manuel Nöbet Oluştur Butonu */}
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-lg hover:shadow-xl"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Manuel Nöbet Oluştur
+        </button>
       </div>
     );
   }
@@ -153,6 +163,22 @@ export default function DutyScheduler() {
           </p>
         </div>
       )}
+
+      {/* Header with Manual Add Button */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          📅 {dateStr} Nöbet Çizelgesi
+        </h2>
+        <button
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Manuel Ekle
+        </button>
+      </div>
 
       {/* Location Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
