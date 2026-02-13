@@ -102,6 +102,12 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
       const needsTwoPeople = (location !== 'Çapraz') && (isNight || isAkşam);
       const devriyeCount = needsTwoPeople ? 2 : 1;
 
+      // Validate
+      if (!isDevriye && !selectedPersonnelId) {
+        setError('Lütfen bir personel seçin');
+        return;
+      }
+
       // Add the new duty(s)
       if (isDevriye) {
         // Entire shift is Devriye - create multiple devriye assignments
@@ -118,7 +124,7 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
       } else {
         // Normal personnel assignment
         await addDuty({
-          personnelId: selectedPersonnelId || '',
+          personnelId: selectedPersonnelId || null,  // Send null if empty
           location,
           shift,
           date: new Date(dateStr),

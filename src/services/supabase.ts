@@ -176,10 +176,17 @@ export const supabaseHelpers = {
     if (!supabase) return { error: 'Supabase not configured' };
     
     // If isDevriye is true, personnel_id must be NULL
+    // If isDevriye is false, personnel_id must be a valid UUID
     const isDevriye = duty.isDevriye === true;
+    const personnelId = duty.personnelId;
+    
+    // Validate: if not devriye, personnel_id must be a valid string
+    if (!isDevriye && (!personnelId || personnelId === '')) {
+      return { error: 'Personel seçilmeli' };
+    }
     
     const dutyData = {
-      personnel_id: isDevriye ? null : (duty.personnelId || null),
+      personnel_id: isDevriye ? null : personnelId,
       location: duty.location,
       shift: duty.shift,
       date: duty.date instanceof Date ? duty.date.toISOString().split('T')[0] : duty.date,
