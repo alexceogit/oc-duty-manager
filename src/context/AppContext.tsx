@@ -770,23 +770,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     alert(`DEBUG: ${pending.length} nöbet kaydedilecek...\n\n` + pending.map((d, i) => 
-      `${i+1}. ${d.location} - ${d.shift || 'Nizamiye'} - Personel: ${d.personnelId?.substring(0,8)}...`
+      `${i+1}. ${d.location} - ${d.shift || 'Nizamiye'} - Devriye: ${d.isDevriye ? 'Evet' : 'Hayır'}`
     ).join('\n'));
     
     dispatch({ type: 'SET_LOADING', payload: true });
     
     try {
       for (const duty of pending) {
-        alert(`DEBUG: Kaydediliyor - ${duty.location} - ${duty.shift || 'Nizamiye'}`);
+        const isDevriye = duty.isDevriye === true;
+        
+        alert(`DEBUG: Kaydediliyor - ${duty.location} - ${duty.shift || 'Nizamiye'} - Devriye: ${isDevriye ? 'Evet' : 'Hayır'}`);
         
         // Save to Supabase
         const { error } = await supabaseHelpers.addDuty({
-          personnel_id: duty.personnelId,
+          personnel_id: isDevriye ? null : duty.personnelId,
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
           is_manual: duty.isManual,
-          is_devriye: duty.isDevriye || false
+          is_devriye: isDevriye
         });
         
         if (error) {

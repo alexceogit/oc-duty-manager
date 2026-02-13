@@ -175,14 +175,16 @@ export const supabaseHelpers = {
   async addDuty(duty: any) {
     if (!supabase) return { error: 'Supabase not configured' };
     
-    // personnel_id NULL means devriye assignment
+    // If isDevriye is true, personnel_id must be NULL
+    const isDevriye = duty.isDevriye === true;
+    
     const dutyData = {
-      personnel_id: duty.personnelId || null,
+      personnel_id: isDevriye ? null : (duty.personnelId || null),
       location: duty.location,
       shift: duty.shift,
       date: duty.date instanceof Date ? duty.date.toISOString().split('T')[0] : duty.date,
       is_manual: duty.isManual,
-      is_devriye: duty.isDevriye || false
+      is_devriye: isDevriye
     };
     
     const { error } = await supabase.from('duty_assignments').insert(dutyData);
