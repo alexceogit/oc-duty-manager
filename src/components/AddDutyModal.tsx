@@ -62,9 +62,6 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
 
   // Filter available personnel (not already assigned to this slot)
   const availablePersonnel = useMemo(() => {
-    console.log('DEBUG: state.duties length:', state.duties.length);
-    console.log('DEBUG: state.personnel length:', state.personnel.length);
-    console.log('DEBUG: assignedPersonnelIds:', assignedPersonnelIds);
     return state.personnel.filter(p => {
       // Must be active
       if (!p.isActive) return false;
@@ -85,15 +82,8 @@ export function AddDutyModal({ isOpen, onClose, locProp, shiftProp, date, existi
       return;
     }
     
-    // Debug: Show selected personnel ID
-    alert(`DEBUG: selectedPersonnelId="${selectedPersonnelId}" isDevriye=${isDevriye}`);
-    
     // Check if personnel is selected (either a valid ID or devriye)
     const isPersonnelSelected = selectedPersonnelId && selectedPersonnelId.trim() !== '';
-    
-    // Debug: Show validation logic
-    alert(`DEBUG: Validation:\n- isDevriye=${isDevriye}\n- selectedPersonnelId="${selectedPersonnelId}"\n- isPersonnelSelected=${isPersonnelSelected}\n- WillShowError=${!isDevriye && !isPersonnelSelected}`);
-    
     if (!isDevriye && !isPersonnelSelected) {
       setError('Lütfen bir personel seçin');
       return;

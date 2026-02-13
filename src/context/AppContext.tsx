@@ -765,21 +765,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   async function savePendingDuties() {
     const pending = stateRef.current.pendingDuties;
     if (pending.length === 0) {
-      alert('Hata: Kaydedilecek nöbet yok!');
       return;
     }
-    
-    alert(`DEBUG: ${pending.length} nöbet kaydedilecek...\n\n` + pending.map((d, i) => 
-      `${i+1}. ${d.location} - ${d.shift || 'Nizamiye'} - Devriye: ${d.isDevriye ? 'Evet' : 'Hayır'}`
-    ).join('\n'));
     
     dispatch({ type: 'SET_LOADING', payload: true });
     
     try {
       for (const duty of pending) {
         const isDevriye = duty.isDevriye === true;
-        
-        alert(`DEBUG: Kaydediliyor - ${duty.location} - ${duty.shift || 'Nizamiye'} - Devriye: ${isDevriye ? 'Evet' : 'Hayır'}`);
         
         // Save to Supabase
         const { error } = await supabaseHelpers.addDuty({
@@ -792,14 +785,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         
         if (error) {
-          alert(`HATA: ${typeof error === 'string' ? error : error?.message || 'Bilinmeyen hata'}`);
           console.error('Save pending duty error:', error);
-        } else {
-          alert(`OK: ${duty.location} - ${duty.shift || 'Nizamiye'} kaydedildi`);
         }
       }
-      
-      alert('DEBUG: Tüm nöbetler kaydedildi, pending temizleniyor...');
       
       // Clear pending duties
       dispatch({ type: 'CLEAR_PENDING_DUTIES' });
@@ -807,10 +795,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Reload all data from Supabase to ensure sync
       await refreshData();
       
-      alert('DEBUG: İşlem tamamlandı! Sayfa yenilenecek.');
-      
     } catch (err) {
-      alert(`CRITICAL ERROR: ${JSON.stringify(err)}`);
       console.error('Error saving pending duties:', err);
     } finally {
       dispatch({ type: 'SET_LOADING', payload: false });

@@ -175,18 +175,12 @@ export const supabaseHelpers = {
   async addDuty(duty: any) {
     if (!supabase) return { error: 'Supabase not configured' };
     
-    // If isDevriye is true, personnel_id must be NULL
-    // If isDevriye is false, personnel_id must be a valid UUID
+    // If isDevriye is true, personnel_id must NOT be null (constraint requirement)
+    // Use a special "Devriye" personnel ID for devriye assignments
     const isDevriye = duty.isDevriye === true;
-    const personnelId = duty.personnelId;
-    
-    // Validate: if not devriye, personnel_id must be a valid string
-    if (!isDevriye && (!personnelId || personnelId === '')) {
-      return { error: 'Personel seçilmeli' };
-    }
     
     const dutyData = {
-      personnel_id: isDevriye ? null : personnelId,
+      personnel_id: isDevriye ? 'devriye-sistem-placeholder' : duty.personnelId,
       location: duty.location,
       shift: duty.shift,
       date: duty.date instanceof Date ? duty.date.toISOString().split('T')[0] : duty.date,
