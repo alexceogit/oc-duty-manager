@@ -356,8 +356,8 @@ export default function DutyScheduler() {
             setIsAddModalOpen(false);
             setAddModalData(null);
           }}
-          location={addModalData.location}
-          shift={addModalData.shift}
+          preselectedLocation={addModalData.location}
+          preselectedShift={addModalData.shift}
           date={state.currentDate}
         />
       )}
