@@ -761,9 +761,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     try {
       for (const duty of pending) {
-        // Add to local state
-        dispatch({ type: 'ADD_DUTY', payload: duty });
-        
         // Save to Supabase
         const { error } = await supabaseHelpers.addDuty({
           personnel_id: duty.personnelId,
@@ -780,6 +777,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Clear pending duties
       dispatch({ type: 'CLEAR_PENDING_DUTIES' });
+      
+      // Reload all data from Supabase to ensure sync
+      await refreshData();
       
     } catch (err) {
       console.error('Error saving pending duties:', err);
