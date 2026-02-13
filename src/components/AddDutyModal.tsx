@@ -14,8 +14,8 @@ interface AddDutyModalProps {
 interface AddDutyModalProps {
   isOpen: boolean;
   onClose: () => void;
-  preselectedLocation?: DutyLocation;
-  preselectedShift?: ShiftType;
+  location?: DutyLocation;
+  shift?: ShiftType;
   date: Date;
   existingAssignmentId?: string;
 }
@@ -23,7 +23,7 @@ interface AddDutyModalProps {
 const locations: DutyLocation[] = ['Çapraz', 'Kaya1', 'Kaya2'];
 const allShifts: ShiftType[] = ['Gündüz 1', 'Gündüz 2', 'Akşam 1', 'Gece 1', 'Gece 2'];
 
-export function AddDutyModal({ isOpen, onClose, preselectedLocation, preselectedShift, date, existingAssignmentId }: AddDutyModalProps) {
+export function AddDutyModal({ isOpen, onClose, location: initLocation, shift: initShift, date, existingAssignmentId }: AddDutyModalProps) {
   const { state, addDuty, deleteDuty } = useApp();
   const [selectedPersonnelId, setSelectedPersonnelId] = useState<string | null>(null);
   const [isDevriye, setIsDevriye] = useState(false);
@@ -31,14 +31,16 @@ export function AddDutyModal({ isOpen, onClose, preselectedLocation, preselected
   const [error, setError] = useState<string | null>(null);
   
   // Allow selection within modal if not pre-selected
-  const [selectedLocation, setSelectedLocation] = useState<DutyLocation | undefined>(preselectedLocation);
-  const [selectedShift, setSelectedShift] = useState<ShiftType | undefined>(preselectedShift);
-  const [showLocationSelector, setShowLocationSelector] = useState(!preselectedLocation);
-  const [showShiftSelector, setShowShiftSelector] = useState(!preselectedShift);
+  const [selectedLocation, setSelectedLocation] = useState<DutyLocation | undefined>(initLocation);
+  const [selectedShift, setSelectedShift] = useState<ShiftType | undefined>(initShift);
+  const [showLocationSelector, setShowLocationSelector] = useState(!initLocation);
+  const [showShiftSelector, setShowShiftSelector] = useState(!initShift);
 
   // Use selected values or fall back to props
-  const location = selectedLocation || preselectedLocation;
-  const shift = selectedShift || preselectedShift;
+  const loc = selectedLocation || initLocation;
+  const sh = selectedShift || initShift;
+  const location = loc as DutyLocation;
+  const shift = sh as ShiftType;
 
   // Reset state when modal opens
   useEffect(() => {
@@ -46,16 +48,16 @@ export function AddDutyModal({ isOpen, onClose, preselectedLocation, preselected
       setSelectedPersonnelId(null);
       setIsDevriye(false);
       setError(null);
-      if (!preselectedLocation) {
+      if (!initLocation) {
         setSelectedLocation(undefined);
         setShowLocationSelector(true);
       }
-      if (!preselectedShift) {
+      if (!initShift) {
         setSelectedShift(undefined);
         setShowShiftSelector(true);
       }
     }
-  }, [isOpen, preselectedLocation, preselectedShift]);
+  }, [isOpen, initLocation, initShift]);
 
   const dateStr = date.toISOString().split('T')[0];
 
