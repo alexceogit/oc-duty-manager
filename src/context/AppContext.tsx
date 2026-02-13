@@ -790,7 +790,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         });
         
         if (error) {
-          alert(`HATA: ${error.message || JSON.stringify(error)}`);
+          alert(`HATA: ${typeof error === 'string' ? error : error?.message || 'Bilinmeyen hata'}`);
           console.error('Save pending duty error:', error);
         } else {
           alert(`OK: ${duty.location} - ${duty.shift || 'Nizamiye'} kaydedildi`);
