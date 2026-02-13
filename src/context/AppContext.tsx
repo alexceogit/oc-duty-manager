@@ -356,9 +356,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteDuty(id: string) {
-    dispatch({ type: 'DELETE_DUTY', payload: id });
-    const { error } = await supabaseHelpers.deleteDuty(id);
-    if (error) console.error('Delete duty error:', error);
+    // Check if duty exists in pendingDuties first (manual duties go to pending)
+    const pendingDuty = state.pendingDuties.find(d => d.id === id);
+    
+    if (pendingDuty) {
+      // Remove from pendingDuties
+      dispatch({ type: 'SET_PENDING_DUTIES', payload: state.pendingDuties.filter(d => d.id !== id) });
+    } else {
+      // Remove from duties (saved duties)
+      dispatch({ type: 'DELETE_DUTY', payload: id });
+      const { error } = await supabaseHelpers.deleteDuty(id);
+      if (error) console.error('Delete duty error:', error);
+    }
   }
 
   // Exemption CRUD Operations
