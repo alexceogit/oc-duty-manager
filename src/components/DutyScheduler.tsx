@@ -129,56 +129,55 @@ export default function DutyScheduler() {
     return 'day';
   };
 
-  if (allDuties.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <div className="text-4xl mb-4">🗓️</div>
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
-          {dateStr} tarihi için henüz nöbet oluşturulmamış.
-        </p>
-        <p className="text-sm text-gray-400 mb-6">
-          Otomatik oluştur'a tıklayın veya personeli sürükleyerek ekleyin.
-        </p>
-        {/* Manuel Nöbet Oluştur Butonu */}
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-lg hover:shadow-xl"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Manuel Nöbet Oluştur
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Pending indicator */}
-      {pendingDuties.length > 0 && (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-          <p className="text-blue-700 dark:text-blue-300 text-sm">
-            📝 <strong>{pendingDuties.length} nöbet</strong> oluşturuldu. Kaydetmek için sayfanın üstündeki "Kaydet" butonuna tıklayın.
+      {/* Empty State */}
+      {allDuties.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">🗓️</div>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">
+            {dateStr} tarihi için henüz nöbet oluşturulmamış.
           </p>
+          <p className="text-sm text-gray-400 mb-6">
+            Otomatik oluştur'a tıklayın veya personeli sürükleyerek ekleyin.
+          </p>
+          {/* Manuel Nöbet Oluştur Butonu */}
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors shadow-lg hover:shadow-xl"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Manuel Nöbet Oluştur
+          </button>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Pending indicator */}
+          {pendingDuties.length > 0 && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-blue-700 dark:text-blue-300 text-sm">
+                📝 <strong>{pendingDuties.length} nöbet</strong> oluşturuldu. Kaydetmek için sayfanın üstündeki "Kaydet" butonuna tıklayın.
+              </p>
+            </div>
+          )}
 
-      {/* Header with Manual Add Button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-          📅 {dateStr} Nöbet Çizelgesi
-        </h2>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          Manuel Ekle
-        </button>
-      </div>
+          {/* Header with Manual Add Button */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              📅 {dateStr} Nöbet Çizelgesi
+            </h2>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Manuel Ekle
+            </button>
+          </div>
 
       {/* Location Filter */}
       <div className="flex gap-2 overflow-x-auto pb-2">
@@ -347,6 +346,8 @@ export default function DutyScheduler() {
           </div>
         ))}
       </div>
+        </>
+      )}
 
       {/* Add Duty Modal - opens when isAddModalOpen is true */}
       {isAddModalOpen && (
