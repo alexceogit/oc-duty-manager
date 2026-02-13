@@ -22,7 +22,7 @@ type Tab = 'personnel' | 'leaves' | 'duties' | 'monthly' | 'settings';
 
 // Main App Content (protected)
 function DutyManager() {
-  const { state, setCurrentDate, runAutoSchedule, clearAutoSchedule, savePendingDuties, discardPendingDuties, refreshData } = useApp();
+  const { state, dispatch, setCurrentDate, runAutoSchedule, clearAutoSchedule, savePendingDuties, discardPendingDuties, refreshData } = useApp();
   const { signOut, state: authState } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('duties');
   const [showAddPersonnel, setShowAddPersonnel] = useState(false);
