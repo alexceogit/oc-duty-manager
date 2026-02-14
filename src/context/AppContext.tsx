@@ -795,8 +795,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         
         // Save to Supabase
+        // For devriye duties, use placeholder ID since personnel_id has NOT NULL constraint
         const { error } = await supabaseHelpers.addDuty({
-          personnel_id: isDevriye ? null : personnelId,
+          personnel_id: isDevriye ? 'devriye-sistem-placeholder' : personnelId,
           location: duty.location,
           shift: duty.shift,
           date: new Date(duty.date).toISOString().split('T')[0],
